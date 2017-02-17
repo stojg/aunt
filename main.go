@@ -17,32 +17,30 @@ func main() {
 	flag.Parse()
 
 	regions := []*string{
-		aws.String("us-east-1"),
-		aws.String("us-west-2"),
-		aws.String("us-west-1"),
+		//aws.String("us-east-1"),
+		//aws.String("us-west-2"),
+		//aws.String("us-west-1"),
 		aws.String("eu-west-1"),
-		aws.String("eu-central-1"),
-		aws.String("ap-southeast-1"),
-		aws.String("ap-northeast-1"),
-		aws.String("ap-southeast-2"),
-		aws.String("ap-northeast-2"),
-		aws.String("ap-south-1"),
-		aws.String("sa-east-1"),
+		//aws.String("eu-central-1"),
+		//aws.String("ap-southeast-1"),
+		//aws.String("ap-northeast-1"),
+		//aws.String("ap-southeast-2"),
+		//aws.String("ap-northeast-2"),
+		//aws.String("ap-south-1"),
+		//aws.String("sa-east-1"),
 	}
 
 	if *port == 0 {
-		fmt.Printf("Aunt is querying low cpu credit data from AWS for %d regions\n", len(regions))
-		metrics := update(regions)
-		filtered := lowCreditFilter(metrics)
-		sorted := natCaseSort(filtered)
-		tableWriter(os.Stdout, getList(sorted))
+		list := updateList(regions)
+		fmt.Printf("querying low cpu credit data for %d regions\n", len(regions))
+		tableWriter(os.Stdout, natCaseSort(list))
 		return
 	}
 
 	var instancesLock sync.RWMutex
 	var instances []*Instance
 
-	ticker := time.NewTicker(time.Second * 5 * 60)
+	ticker := time.NewTicker(time.Second * 10 * 60)
 	go func() {
 		list := updateList(regions)
 		instancesLock.Lock()
@@ -70,7 +68,7 @@ func main() {
 		defer instancesLock.RUnlock()
 		if r.URL.Query().Get("text") != "" {
 			w.Header().Set("Content-Type", "text/plain")
-			tableWriter(w, instances)
+			tableWriter(w, natCaseSort(instances))
 			return
 		}
 
@@ -85,16 +83,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
-
-	//metrics := update(regions)
-	//filtered := lowCreditFilter(metrics)
-	//sorted := natCaseSort(filtered)
-	//tableWriter(sorted, os.Stdout)
-	//jsonWriter(sorted, os.Stdout)
 }
 
 func updateList(regions []*string) []*Instance{
-	fmt.Printf("querying low cpu credit data from AWS for %d regions\n", len(regions))
+	fmt.Printf("querying low cpu credit data for %d regions\n", len(regions))
 	list := getList(lowCreditFilter(update(regions)))
 	fmt.Println("done")
 	return list
@@ -135,24 +127,15 @@ func lowCreditFilter(in chan *Instance) chan *Instance {
 	return out
 }
 
-func natCaseSort(instances chan *Instance) chan *Instance {
-	out := make(chan *Instance)
-
-	go func() {
-		list := make([]*Instance, 0)
-		for i := range instances {
-			list = append(list, i)
-		}
-
-		sort.Sort(InstanceSort(list))
-
-		for _, inst := range list {
-			out <- inst
-		}
-		close(out)
-	}()
-
-	return out
+func natCaseSort(list []*Instance) []*Instance {
+	newList := make([]*Instance, len(list))
+	for i := range list {
+		newList[i] = list[i]
+	}
+	if len(newList) > 1 {
+		sort.Sort(InstanceSort(newList))
+	}
+	return newList
 }
 
 func getList(instances chan *Instance) []*Instance {
