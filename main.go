@@ -17,17 +17,17 @@ func main() {
 	flag.Parse()
 
 	regions := []*string{
-		//aws.String("us-east-1"),
-		//aws.String("us-west-2"),
-		//aws.String("us-west-1"),
+		aws.String("us-east-1"),
+		aws.String("us-west-2"),
+		aws.String("us-west-1"),
 		aws.String("eu-west-1"),
-		//aws.String("eu-central-1"),
-		//aws.String("ap-southeast-1"),
-		//aws.String("ap-northeast-1"),
-		//aws.String("ap-southeast-2"),
-		//aws.String("ap-northeast-2"),
-		//aws.String("ap-south-1"),
-		//aws.String("sa-east-1"),
+		aws.String("eu-central-1"),
+		aws.String("ap-southeast-1"),
+		aws.String("ap-northeast-1"),
+		aws.String("ap-southeast-2"),
+		aws.String("ap-northeast-2"),
+		aws.String("ap-south-1"),
+		aws.String("sa-east-1"),
 	}
 
 	if *port == 0 {
