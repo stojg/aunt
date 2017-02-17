@@ -9,15 +9,15 @@ import (
 	"time"
 )
 
-func NewInstance(i *ec2.Instance, region *string) *Instance {
-	resource := &Instance{
+func NewInstance(i *ec2.Instance, region *string) *Resource {
+	r := &Resource{
 		ResourceID:   *i.InstanceId,
 		Region:       *region,
 		InstanceType: *i.InstanceType,
 		State:        *i.State.Name,
 		LaunchTime:   i.LaunchTime,
-		Namespace:    aws.String("AWS/EC2"),
-		Dimensions: []*cloudwatch.Dimension{
+		namespace:    aws.String("AWS/EC2"),
+		dimensions: []*cloudwatch.Dimension{
 			{
 				Name:  aws.String("InstanceId"),
 				Value: i.InstanceId,
@@ -25,31 +25,29 @@ func NewInstance(i *ec2.Instance, region *string) *Instance {
 		},
 	}
 
-	if strings.HasPrefix(resource.InstanceType, "t2") {
-		resource.Burstable = true
+	if strings.HasPrefix(r.InstanceType, "t2") {
+		r.Burstable = true
 	}
 
 	for _, tag := range i.Tags {
 		if *tag.Key == "Name" && len(*tag.Value) > 0 {
-			resource.Name = *tag.Value
+			r.Name = *tag.Value
 			break
 		}
 	}
-	return resource
+	return r
 }
 
-func NewRDS(db *rds.DBInstance, region *string) *Instance {
-
-	name := strings.Replace(*db.DBInstanceIdentifier, "-", ".", -1) + ".db"
-	resource := &Instance{
+func NewRDS(db *rds.DBInstance, region *string) *Resource {
+	r := &Resource{
 		ResourceID:   *db.DBInstanceIdentifier,
 		Region:       *region,
 		InstanceType: *db.DBInstanceClass,
 		State:        *db.DBInstanceStatus,
 		LaunchTime:   db.InstanceCreateTime,
-		Name:         name,
-		Namespace:    aws.String("AWS/RDS"),
-		Dimensions: []*cloudwatch.Dimension{
+		Name:         strings.Replace(*db.DBInstanceIdentifier, "-", ".", -1) + ".db",
+		namespace:    aws.String("AWS/RDS"),
+		dimensions: []*cloudwatch.Dimension{
 			{
 				Name:  aws.String("DBInstanceIdentifier"),
 				Value: db.DBInstanceIdentifier,
@@ -57,12 +55,12 @@ func NewRDS(db *rds.DBInstance, region *string) *Instance {
 		},
 	}
 	if strings.Contains(*db.DBInstanceClass, "t2") {
-		resource.Burstable = true
+		r.Burstable = true
 	}
-	return resource
+	return r
 }
 
-type Instance struct {
+type Resource struct {
 	ResourceID       string
 	LaunchTime       *time.Time
 	Name             string
@@ -72,6 +70,18 @@ type Instance struct {
 	Burstable        bool
 	CPUUtilization   float64
 	CPUCreditBalance float64
-	Namespace        *string                 `json:"-"`
-	Dimensions       []*cloudwatch.Dimension `json:"-"`
+	namespace        *string
+	dimensions       []*cloudwatch.Dimension
+}
+
+func (r *Resource) ID() string {
+	return r.ResourceID
+}
+
+func (r *Resource) Namespace() *string {
+	return r.namespace
+}
+
+func (r *Resource) Dimensions() []*cloudwatch.Dimension {
+	return r.dimensions
 }

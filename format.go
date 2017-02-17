@@ -9,7 +9,35 @@ import (
 	"time"
 )
 
-func tableWriter(w io.Writer, list []*Instance) {
+func dynamoDBTableWriter(w io.Writer, list []*Dynamodb) {
+	table := tablewriter.NewWriter(w)
+	table.SetHeader([]string{"Name", "Throttled read events (60m)", "Throttled write events (60m)", "Launched"})
+	for _, i := range list {
+		launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *i.LaunchTime)
+		row := []string{
+			i.Name,
+			fmt.Sprintf("%.0f", i.ReadThrottleEvents),
+			fmt.Sprintf("%.0f", i.WriteThrottleEvents),
+			launchedAgo,
+		}
+		table.Append(row)
+	}
+	table.Render()
+}
+
+func dynamoDBJsonWriter(w io.Writer, list []*Dynamodb) {
+	if len(list) == 0 {
+		fmt.Fprint(w, "[]")
+		return
+	}
+	res, err := json.MarshalIndent(list, "", "\t")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprintf(w, "%s", res)
+}
+
+func resourceTableWriter(w io.Writer, list []*Resource) {
 	table := tablewriter.NewWriter(w)
 	table.SetHeader([]string{"Name", "Credits", "Type", "ResourceID", "Launched"})
 	for _, i := range list {
@@ -26,7 +54,7 @@ func tableWriter(w io.Writer, list []*Instance) {
 	table.Render()
 }
 
-func jsonWriter(w io.Writer, list []*Instance) {
+func resourceJsonWriter(w io.Writer, list []*Resource) {
 	if len(list) == 0 {
 		fmt.Fprint(w, "[]")
 		return

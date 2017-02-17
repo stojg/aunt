@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type InstanceSort []*Instance
+type InstanceSort []*Resource
 
 var r = regexp.MustCompile(`[^0-9]+|[0-9]+`)
 

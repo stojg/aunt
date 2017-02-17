@@ -1,13 +1,13 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"net/http"
+	"os"
 	"sort"
 	"sync"
-	"flag"
-	"os"
-	"github.com/aws/aws-sdk-go/aws"
-	"fmt"
-	"net/http"
 	"time"
 )
 
@@ -31,49 +31,76 @@ func main() {
 	}
 
 	if *port == 0 {
-		list := updateList(regions)
+		list := getResourceList(regions)
 		fmt.Printf("querying low cpu credit data for %d regions\n", len(regions))
-		tableWriter(os.Stdout, natCaseSort(list))
+		resourceTableWriter(os.Stdout, natCaseSort(list))
+		dynamoDBTableWriter(os.Stdout, getDynamoDBList(regions))
 		return
 	}
 
 	var instancesLock sync.RWMutex
-	var instances []*Instance
-
-	ticker := time.NewTicker(time.Second * 10 * 60)
+	var instances []*Resource
+	resourceTicker := time.NewTicker(time.Second * 10 * 60)
 	go func() {
-		list := updateList(regions)
+		list := getResourceList(regions)
 		instancesLock.Lock()
 		instances = list
 		instancesLock.Unlock()
-		for t := range ticker.C {
+		for t := range resourceTicker.C {
 			fmt.Printf("%s ", t)
-			list := updateList(regions)
+			list := getResourceList(regions)
 			instancesLock.Lock()
 			instances = list
 			instancesLock.Unlock()
 		}
 	}()
 
+	var dynamoDBLock sync.RWMutex
+	var dynamoTables []*Dynamodb
+	dynamoDBTicker := time.NewTicker(time.Second * 10 * 60)
+	go func() {
+		list := getDynamoDBList(regions)
+		dynamoDBLock.Lock()
+		dynamoTables = list
+		dynamoDBLock.Unlock()
+		for t := range dynamoDBTicker.C {
+			fmt.Printf("%s ", t)
+			list := getDynamoDBList(regions)
+			dynamoDBLock.Lock()
+			dynamoTables = list
+			dynamoDBLock.Unlock()
+		}
+	}()
 
-	http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		fmt.Fprintf(w, "%s", indexHTML)
-
 	})
 
-	http.HandleFunc("/credits", func (w http.ResponseWriter, r *http.Request) {
-
+	http.HandleFunc("/credits", func(w http.ResponseWriter, r *http.Request) {
 		instancesLock.RLock()
 		defer instancesLock.RUnlock()
 		if r.URL.Query().Get("text") != "" {
 			w.Header().Set("Content-Type", "text/plain")
-			tableWriter(w, natCaseSort(instances))
+			resourceTableWriter(w, natCaseSort(instances))
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		jsonWriter(w, instances)
+		resourceJsonWriter(w, instances)
+	})
+
+	http.HandleFunc("/dynamo", func(w http.ResponseWriter, r *http.Request) {
+		dynamoDBLock.RLock()
+		defer dynamoDBLock.RUnlock()
+		if r.URL.Query().Get("text") != "" {
+			w.Header().Set("Content-Type", "text/plain")
+			dynamoDBTableWriter(w, dynamoTables)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		dynamoDBJsonWriter(w, dynamoTables)
 	})
 
 	fmt.Printf("starting webserver at port %d\n", *port)
@@ -85,18 +112,26 @@ func main() {
 	}
 }
 
-func updateList(regions []*string) []*Instance{
-	fmt.Printf("querying low cpu credit data for %d regions\n", len(regions))
-	list := getList(lowCreditFilter(update(regions)))
+func getDynamoDBList(regions []*string) []*Dynamodb {
+	fmt.Printf("querying dynamodb data in %d regions\n", len(regions))
+	list := drainDynamoDB(throttleFilter(fetchDynamoDBs(regions)))
+
 	fmt.Println("done")
 	return list
 }
 
-func merge(regions []chan *Instance) chan *Instance {
+func getResourceList(regions []*string) []*Resource {
+	fmt.Printf("querying low cpu credit data in %d regions\n", len(regions))
+	list := drainResources(lowCreditFilter(fetchResources(regions), 10.0))
+	fmt.Println("done")
+	return list
+}
+
+func mergeResources(regions []chan *Resource) chan *Resource {
 	var wg sync.WaitGroup
 
-	out := make(chan *Instance)
-	output := func(c chan *Instance) {
+	out := make(chan *Resource)
+	output := func(c chan *Resource) {
 		for instance := range c {
 			out <- instance
 		}
@@ -114,11 +149,33 @@ func merge(regions []chan *Instance) chan *Instance {
 	return out
 }
 
-func lowCreditFilter(in chan *Instance) chan *Instance {
-	out := make(chan *Instance)
+func mergeDynamoDBs(regions []chan *Dynamodb) chan *Dynamodb {
+	var wg sync.WaitGroup
+
+	out := make(chan *Dynamodb)
+	output := func(c chan *Dynamodb) {
+		for table := range c {
+			out <- table
+		}
+		wg.Done()
+	}
+	wg.Add(len(regions))
+	for _, c := range regions {
+		go output(c)
+	}
+
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
+}
+
+func throttleFilter(in chan *Dynamodb) chan *Dynamodb {
+	out := make(chan *Dynamodb)
 	go func() {
 		for i := range in {
-			if i.CPUCreditBalance < 10.0 {
+			if i.ReadThrottleEvents > 0 || i.WriteThrottleEvents > 0 {
 				out <- i
 			}
 		}
@@ -127,8 +184,21 @@ func lowCreditFilter(in chan *Instance) chan *Instance {
 	return out
 }
 
-func natCaseSort(list []*Instance) []*Instance {
-	newList := make([]*Instance, len(list))
+func lowCreditFilter(in chan *Resource, limit float64) chan *Resource {
+	out := make(chan *Resource)
+	go func() {
+		for i := range in {
+			if i.CPUCreditBalance < limit {
+				out <- i
+			}
+		}
+		close(out)
+	}()
+	return out
+}
+
+func natCaseSort(list []*Resource) []*Resource {
+	newList := make([]*Resource, len(list))
 	for i := range list {
 		newList[i] = list[i]
 	}
@@ -138,9 +208,17 @@ func natCaseSort(list []*Instance) []*Instance {
 	return newList
 }
 
-func getList(instances chan *Instance) []*Instance {
-	list := make([]*Instance, 0)
+func drainResources(instances chan *Resource) []*Resource {
+	list := make([]*Resource, 0)
 	for i := range instances {
+		list = append(list, i)
+	}
+	return list
+}
+
+func drainDynamoDB(tables chan *Dynamodb) []*Dynamodb {
+	list := make([]*Dynamodb, 0)
+	for i := range tables {
 		list = append(list, i)
 	}
 	return list
@@ -157,6 +235,8 @@ const indexHTML = `<!doctype html>
 	<ul>
 		<li><a href="/credits">credits</a></li>
 		<li><a href="/credits?text=1">credits in text format</a></li>
+		<li><a href="/dynamo">throttled dynamodb tables</a></li>
+		<li><a href="/dynamo?text=1"> throttled dynamo tables in text format</a></li>
 	</ul>
 </body>
 </html>
