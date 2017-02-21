@@ -28,6 +28,7 @@ It takes a while for aunt to query AWS cloudformation data, it typically takes a
 
 # Todo
 
+* Add regions to a configuration
 * Add multi AWS account support by assuming roles 
 * Clean up the duplicate code by the use of interfaces
 * Add filtering and sorting

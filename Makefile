@@ -1,14 +1,7 @@
 
 build:
-	go fmt .
-	go vet .
-	go test .
-	go install .
+	go fmt . ./lib/...
+	go vet . ./lib/...
+	go test . ./lib/...
+	go install . ./lib/...
 	aunt
-
-js:
-	./node_modules/.bin/webpack -d -w --progress
-
-compile:
-	./node_modules/.bin/webpack -p --progress
-	go install .
