@@ -15,7 +15,7 @@ Downloading a binary from the https://github.com/stojg/aunt/releases
 
 Start aunt as a web server running on port 8080
 
-`aunt --port 8080`
+`aunt serve --port 8080`
 
 and go to the index web page at http://localhost:8080/
  
