@@ -38,7 +38,7 @@ func fetchTables(region *string) chan *table {
 	return out
 }
 
-func merge(regions []chan *table) chan *table {
+func merge(in []chan *table) chan *table {
 	var wg sync.WaitGroup
 	out := make(chan *table)
 	output := func(c chan *table) {
@@ -47,8 +47,8 @@ func merge(regions []chan *table) chan *table {
 		}
 		wg.Done()
 	}
-	wg.Add(len(regions))
-	for _, c := range regions {
+	wg.Add(len(in))
+	for _, c := range in {
 		go output(c)
 	}
 	go func() {
@@ -58,7 +58,7 @@ func merge(regions []chan *table) chan *table {
 	return out
 }
 
-func metrics(tables chan *table) chan *table {
+func metrics(in chan *table) chan *table {
 	out := make(chan *table)
 	go func() {
 		sess, err := session.NewSession()
@@ -67,7 +67,7 @@ func metrics(tables chan *table) chan *table {
 			fmt.Println(err)
 			return
 		}
-		for table := range tables {
+		for table := range in {
 			cw := cloudwatch.New(sess, &aws.Config{Region: aws.String(table.Region)})
 			table.WriteThrottleEvents = table.getMetric("WriteThrottleEvents", cw)
 			table.ReadThrottleEvents = table.getMetric("ReadThrottleEvents", cw)

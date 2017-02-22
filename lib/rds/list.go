@@ -37,13 +37,14 @@ func (l *List) Set(list *List) {
 
 func (l *List) Ftable(w io.Writer) {
 	table := tablewriter.NewWriter(w)
-	table.SetHeader([]string{"RDS Name", "Credits", "Type", "ResourceID", "Launched", "Region"})
+	table.SetHeader([]string{"RDS Name", "Credits", "CPU %", "Type", "ResourceID", "Launched", "Region"})
 	sort.Sort(l)
 	for _, i := range l.items {
 		launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *i.LaunchTime)
 		row := []string{
 			i.Name,
 			fmt.Sprintf("%.2f", i.CPUCreditBalance),
+			fmt.Sprintf("%.2f", i.CPUUtilization),
 			i.InstanceType,
 			i.ResourceID,
 			launchedAgo,

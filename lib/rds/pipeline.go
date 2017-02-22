@@ -18,7 +18,7 @@ func fetchDatabases(region *string) chan *database {
 	return resources
 }
 
-func metrics(instances chan *database) chan *database {
+func metrics(in chan *database) chan *database {
 	out := make(chan *database)
 	go func() {
 		sess, err := session.NewSession()
@@ -27,17 +27,17 @@ func metrics(instances chan *database) chan *database {
 			fmt.Println(err)
 			return
 		}
-		for instance := range instances {
-			if instance.State != "available" {
+		for d := range in {
+			if d.State != "available" {
 				continue
 			}
-			if !instance.Burstable {
+			if !d.Burstable {
 				continue
 			}
-			cw := cloudwatch.New(sess, &aws.Config{Region: aws.String(instance.Region)})
-			instance.CPUUtilization = instance.getMetric("CPUUtilization", cw)
-			instance.CPUCreditBalance = instance.getMetric("CPUCreditBalance", cw)
-			out <- instance
+			cw := cloudwatch.New(sess, &aws.Config{Region: aws.String(d.Region)})
+			d.CPUUtilization = d.getMetric("CPUUtilization", cw)
+			d.CPUCreditBalance = d.getMetric("CPUCreditBalance", cw)
+			out <- d
 		}
 	}()
 	return out
@@ -56,7 +56,7 @@ func filter(in chan *database, limit float64) chan *database {
 	return out
 }
 
-func merge(regions []chan *database) chan *database {
+func merge(in []chan *database) chan *database {
 	var wg sync.WaitGroup
 	out := make(chan *database)
 	output := func(c chan *database) {
@@ -65,8 +65,8 @@ func merge(regions []chan *database) chan *database {
 		}
 		wg.Done()
 	}
-	wg.Add(len(regions))
-	for _, c := range regions {
+	wg.Add(len(in))
+	for _, c := range in {
 		go output(c)
 	}
 	go func() {
