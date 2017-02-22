@@ -10,11 +10,13 @@ trim_trailing_whitespace  = true
 insert_final_newline = true
 charset = utf-8
 
-; Golang
 [*.go]
 indent_style = tab
 indent_size = 4
 
-; YAML
 [*.{yaml,yml}]
-indent_size = 2
+indent_size =
+
+[Makefile]
+indent_style = tab
+indent_size = 4
