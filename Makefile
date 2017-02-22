@@ -1,15 +1,15 @@
 VERSION=`git describe --tags`
 BUILDTIME=`date -u +%a,\ %d\ %b\ %Y\ %H:%M:%S\ GMT`
-LDFLAGS=-ldflags "-w -s -X main.Version=${VERSION} -X 'main.Compiled=${BUILDTIME}'"
+LDFLAGS=-ldflags "-s -w -X main.Version=${VERSION} -X 'main.Compiled=${BUILDTIME}'"
 BINARY=aunt
+
+all:
+	go build ${LDFLAGS} -o ${BINARY} .
 
 dev:
 	go fmt . ./lib/...
 	go vet . ./lib/...
 	go test . ./lib/...
-
-all:
-	go build ${LDFLAGS} -o ${BINARY} .
 
 install: dev
 	go install ${LDFLAGS} .

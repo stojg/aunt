@@ -6,52 +6,28 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"strings"
-	"sync"
 	"time"
 )
 
-func Get(regions []*string) []*Resource {
-	dynamoDBs := make([]chan *Resource, 0)
+func Get(regions []*string) *List {
+	dynamoDBs := make([]chan *database, 0)
 	for _, region := range regions {
-		dynamoDBs = append(dynamoDBs, dbs(region))
+		dynamoDBs = append(dynamoDBs, fetchDatabases(region))
 	}
 	merged := merge(dynamoDBs)
 	metrics := metrics(merged)
-	filtered := lowCreditFilter(metrics, 20)
+	filtered := filter(metrics, 20)
 
 	// drain channel
-	list := make([]*Resource, 0)
+	list := NewList()
 	for i := range filtered {
-		list = append(list, i)
+		list.items = append(list.items, i)
 	}
 	return list
 }
 
-type List struct {
-	sync.RWMutex
-	items []*Resource
-}
-
-func NewList() *List {
-	return &List{
-		items: make([]*Resource, 0),
-	}
-}
-
-func (i *List) Get() []*Resource {
-	i.RLock()
-	defer i.RUnlock()
-	return i.items
-}
-
-func (i *List) Set(list []*Resource) {
-	i.Lock()
-	defer i.Unlock()
-	i.items = list
-}
-
-func NewRDS(db *rds.DBInstance, region *string) *Resource {
-	r := &Resource{
+func newRDS(db *rds.DBInstance, region *string) *database {
+	r := &database{
 		ResourceID:   *db.DBInstanceIdentifier,
 		Region:       *region,
 		InstanceType: *db.DBInstanceClass,
@@ -72,7 +48,7 @@ func NewRDS(db *rds.DBInstance, region *string) *Resource {
 	return r
 }
 
-type Resource struct {
+type database struct {
 	ResourceID       string
 	LaunchTime       *time.Time
 	Name             string
@@ -86,11 +62,11 @@ type Resource struct {
 	dimensions       []*cloudwatch.Dimension
 }
 
-func (i *Resource) getMetric(metricName string, cw *cloudwatch.CloudWatch) float64 {
+func (d *database) getMetric(metricName string, cw *cloudwatch.CloudWatch) float64 {
 	input := &cloudwatch.GetMetricStatisticsInput{
-		Namespace:  i.namespace,
+		Namespace:  d.namespace,
 		MetricName: aws.String(metricName),
-		Dimensions: i.dimensions,
+		Dimensions: d.dimensions,
 		StartTime:  aws.Time(time.Now().Add(-15 * time.Minute)),
 		EndTime:    aws.Time(time.Now()),
 		Period:     aws.Int64(3600),

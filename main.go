@@ -49,7 +49,7 @@ SUPPORT:  http://github.com/stojg/aunt
 			Name:  "dynamodb",
 			Usage: "show DynamoDB statistics",
 			Action: func(c *cli.Context) error {
-				dynamodb.Ftable(os.Stdout, dynamodb.Get(regions))
+				dynamodb.Get(regions).Ftable(os.Stdout)
 				return nil
 			},
 		},
@@ -57,7 +57,7 @@ SUPPORT:  http://github.com/stojg/aunt
 			Name:  "ec2",
 			Usage: "show EC2 statistics",
 			Action: func(c *cli.Context) error {
-				ec2.Ftable(os.Stdout, ec2.Get(regions))
+				ec2.Get(regions).Ftable(os.Stdout)
 				return nil
 			},
 		},
@@ -65,7 +65,7 @@ SUPPORT:  http://github.com/stojg/aunt
 			Name:  "rds",
 			Usage: "show RDS statistics",
 			Action: func(c *cli.Context) error {
-				rds.Ftable(os.Stdout, rds.Get(regions))
+				rds.Get(regions).Ftable(os.Stdout)
 				return nil
 			},
 		},
@@ -87,7 +87,9 @@ func serve(c *cli.Context) error {
 	dbs := rds.NewList()
 	resourceTicker := time.NewTicker(10 * time.Minute)
 	go func() {
+		tables.Set(dynamodb.Get(regions))
 		instances.Set(ec2.Get(regions))
+		dbs.Set(rds.Get(regions))
 		for range resourceTicker.C {
 			tables.Set(dynamodb.Get(regions))
 			instances.Set(ec2.Get(regions))
@@ -103,7 +105,7 @@ func serve(c *cli.Context) error {
 	http.HandleFunc("/ec2", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("text") != "" {
 			w.Header().Set("Content-Type", "text/plain")
-			ec2.Ftable(w, instances.Get())
+			instances.Ftable(w)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -113,7 +115,7 @@ func serve(c *cli.Context) error {
 	http.HandleFunc("/dynamodb", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("text") != "" {
 			w.Header().Set("Content-Type", "text/plain")
-			dynamodb.Ftable(w, tables.Get())
+			tables.Ftable(w)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -123,7 +125,7 @@ func serve(c *cli.Context) error {
 	http.HandleFunc("/rds", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("text") != "" {
 			w.Header().Set("Content-Type", "text/plain")
-			rds.Ftable(w, dbs.Get())
+			dbs.Ftable(w)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

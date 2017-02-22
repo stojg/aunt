@@ -9,8 +9,8 @@ import (
 	"sync"
 )
 
-func getResources(region *string) chan *Instance {
-	resources := make(chan *Instance)
+func fetchInstances(region *string) chan *instance {
+	resources := make(chan *instance)
 	go func() {
 		describeInstances(region, resources)
 		close(resources)
@@ -18,8 +18,8 @@ func getResources(region *string) chan *Instance {
 	return resources
 }
 
-func metrics(instances chan *Instance) chan *Instance {
-	out := make(chan *Instance)
+func metrics(instances chan *instance) chan *instance {
+	out := make(chan *instance)
 	go func() {
 		for instance := range instances {
 			if instance.State != "running" {
@@ -39,8 +39,8 @@ func metrics(instances chan *Instance) chan *Instance {
 	return out
 }
 
-func lowCreditFilter(in chan *Instance, limit float64) chan *Instance {
-	out := make(chan *Instance)
+func filter(in chan *instance, limit float64) chan *instance {
+	out := make(chan *instance)
 	go func() {
 		for i := range in {
 			if i.CPUCreditBalance < limit {
@@ -52,7 +52,27 @@ func lowCreditFilter(in chan *Instance, limit float64) chan *Instance {
 	return out
 }
 
-func describeInstances(region *string, resources chan *Instance) {
+func merge(regions []chan *instance) chan *instance {
+	var wg sync.WaitGroup
+	out := make(chan *instance)
+	output := func(c chan *instance) {
+		for instance := range c {
+			out <- instance
+		}
+		wg.Done()
+	}
+	wg.Add(len(regions))
+	for _, c := range regions {
+		go output(c)
+	}
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
+}
+
+func describeInstances(region *string, resources chan *instance) {
 	sess := session.New()
 	svc := ec2.New(sess, &aws.Config{Region: region})
 	resp, err := svc.DescribeInstances(nil)
@@ -65,26 +85,4 @@ func describeInstances(region *string, resources chan *Instance) {
 			resources <- newInstance(ec2Inst, region)
 		}
 	}
-}
-
-func merge(regions []chan *Instance) chan *Instance {
-	var wg sync.WaitGroup
-
-	out := make(chan *Instance)
-	output := func(c chan *Instance) {
-		for instance := range c {
-			out <- instance
-		}
-		wg.Done()
-	}
-	wg.Add(len(regions))
-	for _, c := range regions {
-		go output(c)
-	}
-
-	go func() {
-		wg.Wait()
-		close(out)
-	}()
-	return out
 }

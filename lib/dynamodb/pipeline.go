@@ -9,9 +9,8 @@ import (
 	"sync"
 )
 
-func tables(region *string) chan *Table {
-	out := make(chan *Table)
-
+func fetchTables(region *string) chan *table {
+	out := make(chan *table)
 	go func() {
 		svc := dynamodb.New(session.New(), &aws.Config{Region: region})
 		resp, err := svc.ListTables(nil)
@@ -31,15 +30,13 @@ func tables(region *string) chan *Table {
 		}
 		close(out)
 	}()
-
 	return out
 }
 
-func merge(regions []chan *Table) chan *Table {
+func merge(regions []chan *table) chan *table {
 	var wg sync.WaitGroup
-
-	out := make(chan *Table)
-	output := func(c chan *Table) {
+	out := make(chan *table)
+	output := func(c chan *table) {
 		for table := range c {
 			out <- table
 		}
@@ -49,7 +46,6 @@ func merge(regions []chan *Table) chan *Table {
 	for _, c := range regions {
 		go output(c)
 	}
-
 	go func() {
 		wg.Wait()
 		close(out)
@@ -57,8 +53,8 @@ func merge(regions []chan *Table) chan *Table {
 	return out
 }
 
-func metrics(tables chan *Table) chan *Table {
-	out := make(chan *Table)
+func metrics(tables chan *table) chan *table {
+	out := make(chan *table)
 	go func() {
 		for table := range tables {
 			cw := cloudwatch.New(session.New(), &aws.Config{Region: aws.String(table.Region)})
@@ -71,8 +67,8 @@ func metrics(tables chan *Table) chan *Table {
 	return out
 }
 
-func filter(in chan *Table) chan *Table {
-	out := make(chan *Table)
+func filter(in chan *table) chan *table {
+	out := make(chan *table)
 	go func() {
 		for i := range in {
 			if i.ReadThrottleEvents > 0 || i.WriteThrottleEvents > 0 || i.Items > 10000 {

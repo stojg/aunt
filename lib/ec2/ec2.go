@@ -6,52 +6,28 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"strings"
-	"sync"
 	"time"
 )
 
-func Get(regions []*string) []*Instance {
-	instances := make([]chan *Instance, 0)
+func Get(regions []*string) *List {
+	instances := make([]chan *instance, 0)
 	for _, region := range regions {
-		instances = append(instances, getResources(region))
+		instances = append(instances, fetchInstances(region))
 	}
 	merged := merge(instances)
 	metrics := metrics(merged)
-	lowCredits := lowCreditFilter(metrics, 10.0)
+	filtered := filter(metrics, 10.0)
 
 	// drain channel
-	list := make([]*Instance, 0)
-	for i := range lowCredits {
-		list = append(list, i)
+	list := NewList()
+	for i := range filtered {
+		list.items = append(list.items, i)
 	}
 	return list
 }
 
-type List struct {
-	sync.RWMutex
-	items []*Instance
-}
-
-func NewList() *List {
-	return &List{
-		items: make([]*Instance, 0),
-	}
-}
-
-func (i *List) Get() []*Instance {
-	i.RLock()
-	defer i.RUnlock()
-	return i.items
-}
-
-func (i *List) Set(list []*Instance) {
-	i.Lock()
-	defer i.Unlock()
-	i.items = list
-}
-
-func newInstance(i *ec2.Instance, region *string) *Instance {
-	r := &Instance{
+func newInstance(i *ec2.Instance, region *string) *instance {
+	r := &instance{
 		ResourceID:   *i.InstanceId,
 		Region:       *region,
 		InstanceType: *i.InstanceType,
@@ -65,7 +41,6 @@ func newInstance(i *ec2.Instance, region *string) *Instance {
 			},
 		},
 	}
-
 	if strings.HasPrefix(r.InstanceType, "t2") {
 		r.Burstable = true
 	}
@@ -79,7 +54,7 @@ func newInstance(i *ec2.Instance, region *string) *Instance {
 	return r
 }
 
-type Instance struct {
+type instance struct {
 	ResourceID       string
 	LaunchTime       *time.Time
 	Name             string
@@ -93,7 +68,7 @@ type Instance struct {
 	dimensions       []*cloudwatch.Dimension
 }
 
-func (i *Instance) getMetric(metricName string, cw *cloudwatch.CloudWatch) float64 {
+func (i *instance) getMetric(metricName string, cw *cloudwatch.CloudWatch) float64 {
 	input := &cloudwatch.GetMetricStatisticsInput{
 		Namespace:  i.namespace,
 		MetricName: aws.String(metricName),

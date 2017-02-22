@@ -9,8 +9,8 @@ import (
 	"sync"
 )
 
-func dbs(region *string) chan *Resource {
-	resources := make(chan *Resource)
+func fetchDatabases(region *string) chan *database {
+	resources := make(chan *database)
 	go func() {
 		describeRDSes(region, resources)
 		close(resources)
@@ -18,10 +18,8 @@ func dbs(region *string) chan *Resource {
 	return resources
 }
 
-func metrics(instances chan *Resource) chan *Resource {
-
-	out := make(chan *Resource)
-
+func metrics(instances chan *database) chan *database {
+	out := make(chan *database)
 	go func() {
 		for instance := range instances {
 			if instance.State != "available" {
@@ -40,8 +38,8 @@ func metrics(instances chan *Resource) chan *Resource {
 	return out
 }
 
-func lowCreditFilter(in chan *Resource, limit float64) chan *Resource {
-	out := make(chan *Resource)
+func filter(in chan *database, limit float64) chan *database {
+	out := make(chan *database)
 	go func() {
 		for i := range in {
 			if i.CPUCreditBalance < limit {
@@ -53,11 +51,10 @@ func lowCreditFilter(in chan *Resource, limit float64) chan *Resource {
 	return out
 }
 
-func merge(regions []chan *Resource) chan *Resource {
+func merge(regions []chan *database) chan *database {
 	var wg sync.WaitGroup
-
-	out := make(chan *Resource)
-	output := func(c chan *Resource) {
+	out := make(chan *database)
+	output := func(c chan *database) {
 		for table := range c {
 			out <- table
 		}
@@ -67,7 +64,6 @@ func merge(regions []chan *Resource) chan *Resource {
 	for _, c := range regions {
 		go output(c)
 	}
-
 	go func() {
 		wg.Wait()
 		close(out)
@@ -75,7 +71,7 @@ func merge(regions []chan *Resource) chan *Resource {
 	return out
 }
 
-func describeRDSes(region *string, resources chan *Resource) {
+func describeRDSes(region *string, resources chan *database) {
 	sess := session.New()
 	svc := rds.New(sess, &aws.Config{Region: region})
 	resp, err := svc.DescribeDBInstances(nil)
@@ -84,6 +80,6 @@ func describeRDSes(region *string, resources chan *Resource) {
 		return
 	}
 	for _, db := range resp.DBInstances {
-		resources <- NewRDS(db, region)
+		resources <- newRDS(db, region)
 	}
 }
