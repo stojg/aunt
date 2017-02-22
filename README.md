@@ -38,6 +38,7 @@ It takes a while for aunt to query AWS cloudformation data, it typically takes a
 * Store configuration data in JSON
 * Add makefile build target for doing a release to the main repo
 * serve should have the option to be started with SSL certificates 
+* Add summary on index page
 
 
 
