@@ -21,6 +21,12 @@ func fetchDatabases(region *string) chan *database {
 func metrics(instances chan *database) chan *database {
 	out := make(chan *database)
 	go func() {
+		sess, err := session.NewSession()
+		defer close(out)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		for instance := range instances {
 			if instance.State != "available" {
 				continue
@@ -28,12 +34,11 @@ func metrics(instances chan *database) chan *database {
 			if !instance.Burstable {
 				continue
 			}
-			cw := cloudwatch.New(session.New(), &aws.Config{Region: aws.String(instance.Region)})
+			cw := cloudwatch.New(sess, &aws.Config{Region: aws.String(instance.Region)})
 			instance.CPUUtilization = instance.getMetric("CPUUtilization", cw)
 			instance.CPUCreditBalance = instance.getMetric("CPUCreditBalance", cw)
 			out <- instance
 		}
-		close(out)
 	}()
 	return out
 }
@@ -72,7 +77,11 @@ func merge(regions []chan *database) chan *database {
 }
 
 func describeRDSes(region *string, resources chan *database) {
-	sess := session.New()
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	svc := rds.New(sess, &aws.Config{Region: region})
 	resp, err := svc.DescribeDBInstances(nil)
 	if err != nil {

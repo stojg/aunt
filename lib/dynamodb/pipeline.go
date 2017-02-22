@@ -12,7 +12,12 @@ import (
 func fetchTables(region *string) chan *table {
 	out := make(chan *table)
 	go func() {
-		svc := dynamodb.New(session.New(), &aws.Config{Region: region})
+		sess, err := session.NewSession(&aws.Config{Region: region})
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		svc := dynamodb.New(sess)
 		resp, err := svc.ListTables(nil)
 		if err != nil {
 			fmt.Println(err)
@@ -56,13 +61,18 @@ func merge(regions []chan *table) chan *table {
 func metrics(tables chan *table) chan *table {
 	out := make(chan *table)
 	go func() {
+		sess, err := session.NewSession()
+		defer close(out)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		for table := range tables {
-			cw := cloudwatch.New(session.New(), &aws.Config{Region: aws.String(table.Region)})
+			cw := cloudwatch.New(sess, &aws.Config{Region: aws.String(table.Region)})
 			table.WriteThrottleEvents = table.getMetric("WriteThrottleEvents", cw)
 			table.ReadThrottleEvents = table.getMetric("ReadThrottleEvents", cw)
 			out <- table
 		}
-		close(out)
 	}()
 	return out
 }

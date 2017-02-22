@@ -21,6 +21,12 @@ func fetchInstances(region *string) chan *instance {
 func metrics(instances chan *instance) chan *instance {
 	out := make(chan *instance)
 	go func() {
+		sess, err := session.NewSession()
+		defer close(out)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		for instance := range instances {
 			if instance.State != "running" {
 				continue
@@ -28,13 +34,12 @@ func metrics(instances chan *instance) chan *instance {
 			if !instance.Burstable {
 				continue
 			}
-			cw := cloudwatch.New(session.New(), &aws.Config{Region: aws.String(instance.Region)})
+			cw := cloudwatch.New(sess, &aws.Config{Region: aws.String(instance.Region)})
 
 			instance.CPUUtilization = instance.getMetric("CPUUtilization", cw)
 			instance.CPUCreditBalance = instance.getMetric("CPUCreditBalance", cw)
 			out <- instance
 		}
-		close(out)
 	}()
 	return out
 }
@@ -73,7 +78,11 @@ func merge(regions []chan *instance) chan *instance {
 }
 
 func describeInstances(region *string, resources chan *instance) {
-	sess := session.New()
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	svc := ec2.New(sess, &aws.Config{Region: region})
 	resp, err := svc.DescribeInstances(nil)
 	if err != nil {
