@@ -19,17 +19,17 @@ var (
 )
 
 var regions = []*string{
-	//aws.String("us-east-1"),
+	aws.String("us-east-1"),
 	aws.String("us-west-2"),
-	//aws.String("us-west-1"),
+	aws.String("us-west-1"),
 	aws.String("eu-west-1"),
-	//aws.String("eu-central-1"),
-	//aws.String("ap-southeast-1"),
-	//aws.String("ap-northeast-1"),
+	aws.String("eu-central-1"),
+	aws.String("ap-southeast-1"),
+	aws.String("ap-northeast-1"),
 	aws.String("ap-southeast-2"),
-	//aws.String("ap-northeast-2"),
-	//aws.String("ap-south-1"),
-	//aws.String("sa-east-1"),
+	aws.String("ap-northeast-2"),
+	aws.String("ap-south-1"),
+	aws.String("sa-east-1"),
 }
 
 func main() {
@@ -109,7 +109,7 @@ func serve(c *cli.Context) error {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		core.Fjson(w, tables.Get())
+		core.Fjson(w, instances.Get())
 	})
 
 	http.HandleFunc("/dynamodb", func(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +129,7 @@ func serve(c *cli.Context) error {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		core.Fjson(w, tables.Get())
+		core.Fjson(w, dbs.Get())
 	})
 
 	fmt.Fprintf(os.Stdout, "starting webserver at port %d\n", c.Int("port"))
