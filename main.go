@@ -74,6 +74,7 @@ SUPPORT:  http://github.com/stojg/aunt
 			Usage: "run as a HTTP server",
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "port", Value: 8080},
+				cli.IntFlag{Name: "refresh", Value: 10},
 			},
 			Action: serve,
 		},
@@ -85,7 +86,7 @@ func serve(c *cli.Context) error {
 	instances := ec2.NewList()
 	tables := dynamodb.NewList()
 	dbs := rds.NewList()
-	resourceTicker := time.NewTicker(10 * time.Minute)
+	resourceTicker := time.NewTicker(time.Duration(c.Int("refresh")) * time.Minute)
 	go func() {
 		tables.Set(dynamodb.Get(regions))
 		instances.Set(ec2.Get(regions))
