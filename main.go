@@ -1,43 +1,87 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/stojg/aunt/lib/core"
 	"github.com/stojg/aunt/lib/dynamodb"
 	"github.com/stojg/aunt/lib/ec2"
 	"github.com/stojg/aunt/lib/rds"
+	"github.com/urfave/cli"
 	"net/http"
 	"os"
 	"time"
 )
 
+var (
+	Version  string
+	Compiled string
+)
+
+var regions = []*string{
+	//aws.String("us-east-1"),
+	aws.String("us-west-2"),
+	//aws.String("us-west-1"),
+	aws.String("eu-west-1"),
+	//aws.String("eu-central-1"),
+	//aws.String("ap-southeast-1"),
+	//aws.String("ap-northeast-1"),
+	aws.String("ap-southeast-2"),
+	//aws.String("ap-northeast-2"),
+	//aws.String("ap-south-1"),
+	//aws.String("sa-east-1"),
+}
+
 func main() {
 
-	var port = flag.Int("port", 0, "port number to listen on")
-	flag.Parse()
+	app := cli.NewApp()
+	app.Version = Version
+	cParsed, _ := time.Parse(time.RFC1123, Compiled)
+	app.Compiled = cParsed
 
-	regions := []*string{
-		aws.String("us-east-1"),
-		aws.String("us-west-2"),
-		aws.String("us-west-1"),
-		aws.String("eu-west-1"),
-		aws.String("eu-central-1"),
-		aws.String("ap-southeast-1"),
-		aws.String("ap-northeast-1"),
-		aws.String("ap-southeast-2"),
-		aws.String("ap-northeast-2"),
-		aws.String("ap-south-1"),
-		aws.String("sa-east-1"),
+	cli.AppHelpTemplate = fmt.Sprintf(`%s
+COMPILED: {{.Compiled}}
+SUPPORT:  http://github.com/stojg/aunt
+`, cli.AppHelpTemplate)
+
+	app.Commands = []cli.Command{
+		{
+			Name:  "dynamodb",
+			Usage: "show DynamoDB statistics",
+			Action: func(c *cli.Context) error {
+				dynamodb.Ftable(os.Stdout, dynamodb.Get(regions))
+				return nil
+			},
+		},
+		{
+			Name:  "ec2",
+			Usage: "show EC2 statistics",
+			Action: func(c *cli.Context) error {
+				ec2.Ftable(os.Stdout, ec2.Get(regions))
+				return nil
+			},
+		},
+		{
+			Name:  "rds",
+			Usage: "show RDS statistics",
+			Action: func(c *cli.Context) error {
+				rds.Ftable(os.Stdout, rds.Get(regions))
+				return nil
+			},
+		},
+		{
+			Name:  "serve",
+			Usage: "run as a HTTP server",
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "port", Value: 8080},
+			},
+			Action: serve,
+		},
 	}
+	app.Run(os.Args)
+}
 
-	if *port == 0 {
-		dynamodb.Ftable(os.Stdout, dynamodb.Get(regions))
-		ec2.Ftable(os.Stdout, ec2.Get(regions))
-		rds.Ftable(os.Stdout, rds.Get(regions))
-		return
-	}
-
+func serve(c *cli.Context) error {
 	instances := ec2.NewList()
 	tables := dynamodb.NewList()
 	dbs := rds.NewList()
@@ -63,7 +107,7 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		ec2.Fjson(w, instances.Get())
+		core.Fjson(w, tables.Get())
 	})
 
 	http.HandleFunc("/dynamodb", func(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +117,7 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		dynamodb.Fjson(w, tables.Get())
+		core.Fjson(w, tables.Get())
 	})
 
 	http.HandleFunc("/rds", func(w http.ResponseWriter, r *http.Request) {
@@ -83,16 +127,17 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		rds.Fjson(w, dbs.Get())
+		core.Fjson(w, tables.Get())
 	})
 
-	fmt.Fprintf(os.Stdout, "starting webserver at port %d\n", *port)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
+	fmt.Fprintf(os.Stdout, "starting webserver at port %d\n", c.Int("port"))
+	err := http.ListenAndServe(fmt.Sprintf(":%d", c.Int("port")), nil)
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
+		return err
 	}
+	return nil
+
 }
 
 const indexHTML = `<!doctype html>

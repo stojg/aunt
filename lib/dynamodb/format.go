@@ -1,7 +1,6 @@
 package dynamodb
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/ararog/timeago"
 	"github.com/olekukonko/tablewriter"
@@ -25,16 +24,4 @@ func Ftable(w io.Writer, list []*Table) {
 		table.Append(row)
 	}
 	table.Render()
-}
-
-func Fjson(w io.Writer, list []*Table) {
-	if len(list) == 0 {
-		fmt.Fprint(w, "[]")
-		return
-	}
-	res, err := json.MarshalIndent(list, "", "\t")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Fprintf(w, "%s", res)
 }
