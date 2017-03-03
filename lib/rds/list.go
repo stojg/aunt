@@ -14,7 +14,8 @@ import (
 
 type List struct {
 	sync.RWMutex
-	items []*database
+	items       []*database
+	lastUpdated time.Time
 }
 
 func NewList() *List {
@@ -25,14 +26,16 @@ func NewList() *List {
 
 func (l *List) Get() []*database {
 	l.RLock()
-	defer l.RUnlock()
-	return l.items
+	i := l.items
+	l.RUnlock()
+	return i
 }
 
 func (l *List) Set(list *List) {
 	l.Lock()
-	defer l.Unlock()
 	l.items = list.Get()
+	l.lastUpdated = time.Now()
+	l.Unlock()
 }
 
 func (l *List) Ftable(w io.Writer) {
@@ -53,6 +56,10 @@ func (l *List) Ftable(w io.Writer) {
 		table.Append(row)
 	}
 	table.Render()
+}
+
+func (l *List) Updated() time.Time {
+	return l.lastUpdated
 }
 
 func (l *List) Len() int {

@@ -100,7 +100,7 @@ func serve(c *cli.Context) error {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, "%s", indexHTML)
+		fmt.Fprintf(w, indexHTML, instances.Len(), instances.Updated(), tables.Len(), tables.Updated(), dbs.Len(), dbs.Updated())
 	})
 
 	http.HandleFunc("/ec2", func(w http.ResponseWriter, r *http.Request) {
@@ -143,22 +143,62 @@ func serve(c *cli.Context) error {
 
 }
 
-const indexHTML = `<!doctype html>
-<html lang="en-gb">
-<head>
-	<title>aunt</title>
-	<link rel="stylesheet" href="https://raw.githubusercontent.com/necolas/normalize.css/master/normalize.css">
-</head>
-<body>
-	<h1>aunt</h1>
-	<ul>
-		<li><a href="/ec2">EC2</a></li>
-		<li><a href="/ec2?text=1">EC2 in text format</a></li>
-		<li><a href="/dynamodb">DynamoDB tables</a></li>
-		<li><a href="/dynamodb?text=1">DynamoDB tables in text format</a></li>
-		<li><a href="/rds">RDS</a></li>
-		<li><a href="/rds?text=1">RDS in text format</a></li>
-	</ul>
-</body>
+const indexHTML = `<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>aunt</title>
+		<link rel="stylesheet"
+			href="https://unpkg.com/purecss@0.6.2/build/pure-min.css"
+			integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD"
+			crossorigin="anonymous">
+		<style>
+			body {
+				font-family: Georgia, Times, "Times New Roman", serif;
+				margin: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>aunt</h1>
+
+		<p>
+			Updates every 10 minutes
+		</p>
+		<table class="pure-table">
+			<thead>
+				<tr>
+					<th>Type</th>
+					<th>Count</th>
+					<th>Human</th>
+					<th>JSON</th>
+					<th>Updated</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>EC2</td>
+					<td>%d</td>
+					<td><a href="/ec2">json</a></td>
+					<td><a href="/ec2?text=1">human</a></td>
+					<td>%s</td>
+				</tr>
+				<tr>
+					<td>DynamoDB</td>
+					<td>%d</td>
+					<td><a href="/dynamodb">json</a></td>
+					<td><a href="/dynamodb?text=1">human</a></td>
+					<td>%s</td>
+				</tr>
+				<tr>
+					<td>RDS</td>
+					<td>%d</td>
+					<td><a href="/rds">json</a></td>
+					<td><a href="/rds?text=1">human</a></td>
+					<td>%s</td>
+				</tr>
+			</tbody>
+		</table>
+	</body>
 </html>
 `
