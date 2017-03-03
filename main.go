@@ -171,7 +171,7 @@ const indexHTML = `<html lang="en">
 					<th>Type</th>
 					<th>Count</th>
 					<th>Human</th>
-					<th>JSON</th>
+					<th>json</th>
 					<th>Updated</th>
 				</tr>
 			</thead>
@@ -179,22 +179,22 @@ const indexHTML = `<html lang="en">
 				<tr>
 					<td>EC2</td>
 					<td>%d</td>
-					<td><a href="/ec2">json</a></td>
 					<td><a href="/ec2?text=1">human</a></td>
+					<td><a href="/ec2">json</a></td>
 					<td>%s</td>
 				</tr>
 				<tr>
 					<td>DynamoDB</td>
 					<td>%d</td>
-					<td><a href="/dynamodb">json</a></td>
 					<td><a href="/dynamodb?text=1">human</a></td>
+					<td><a href="/dynamodb">json</a></td>
 					<td>%s</td>
 				</tr>
 				<tr>
 					<td>RDS</td>
 					<td>%d</td>
-					<td><a href="/rds">json</a></td>
 					<td><a href="/rds?text=1">human</a></td>
+					<td><a href="/rds">json</a></td>
 					<td>%s</td>
 				</tr>
 			</tbody>
