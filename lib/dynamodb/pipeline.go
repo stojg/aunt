@@ -2,11 +2,12 @@ package dynamodb
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"sync"
 )
 
 func fetchTables(region *string) chan *table {
@@ -81,7 +82,7 @@ func filter(in chan *table) chan *table {
 	out := make(chan *table)
 	go func() {
 		for i := range in {
-			if i.ReadThrottleEvents > 0 || i.WriteThrottleEvents > 0 || i.Items > 10000 {
+			if i.ReadThrottleEvents > 0 || i.WriteThrottleEvents > 0 || i.Items > 3600 {
 				out <- i
 			}
 		}
