@@ -58,12 +58,14 @@ func fetchTables(region *string, roleARN string) chan core.Resource {
 func newTable(t *dynamodb.TableDescription, sess client.ConfigProvider, config *aws.Config) core.Resource {
 	cw := cloudwatch.New(sess, config)
 	return &table{
-		cw:         cw,
-		ResourceID: *t.TableName,
-		LaunchTime: t.CreationDateTime,
-		name:       *t.TableName,
-		Region:     *config.Region,
-		Items:      *t.ItemCount,
+		ResourceID:    *t.TableName,
+		LaunchTime:    t.CreationDateTime,
+		name:          *t.TableName,
+		Region:        *config.Region,
+		Items:         *t.ItemCount,
+		WriteCapacity: *t.ProvisionedThroughput.WriteCapacityUnits,
+		ReadCapacity:  *t.ProvisionedThroughput.ReadCapacityUnits,
+		cw:            cw,
 	}
 }
 
@@ -75,12 +77,14 @@ type table struct {
 	Region              string
 	RoleARN             string
 	WriteThrottleEvents float64
+	WriteCapacity       int64
 	ReadThrottleEvents  float64
+	ReadCapacity        int64
 	cw                  *cloudwatch.CloudWatch
 }
 
 func (t table) Headers() []string {
-	return []string{"DynamoDB name", "Throttled read events (24hr)", "Throttled write events (24hr)", "Entries", "Launched", "Region"}
+	return []string{"DynamoDB name", "Read Capacity", "Throttled read events (24hr)", "Write Capacity", "Throttled write events (24hr)", "Entries", "Launched", "Region"}
 }
 
 func (t *table) Name() string {
@@ -91,7 +95,9 @@ func (t *table) Row() []string {
 	launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *t.LaunchTime)
 	return []string{
 		t.name,
+		fmt.Sprintf("%d", t.ReadCapacity),
 		fmt.Sprintf("%.0f", t.ReadThrottleEvents),
+		fmt.Sprintf("%d", t.WriteCapacity),
 		fmt.Sprintf("%.0f", t.WriteThrottleEvents),
 		fmt.Sprintf("%d", t.Items),
 		launchedAgo,
@@ -112,15 +118,10 @@ func (t *table) getMetric(metricName string) float64 {
 	input := &cloudwatch.GetMetricStatisticsInput{
 		Namespace:  aws.String("AWS/DynamoDB"),
 		MetricName: aws.String(metricName),
-		Dimensions: []*cloudwatch.Dimension{
-			{
-				Name:  aws.String("TableName"),
-				Value: &t.ResourceID,
-			},
-		},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("TableName"), Value: &t.ResourceID}},
 		StartTime:  aws.Time(time.Now().Add(-24 * time.Hour)),
 		EndTime:    aws.Time(time.Now()),
-		Period:     aws.Int64(60 * 60 * 24),
+		Period:     aws.Int64(60),
 		Statistics: []*string{aws.String("SampleCount")},
 	}
 	result, err := t.cw.GetMetricStatistics(input)
@@ -129,8 +130,9 @@ func (t *table) getMetric(metricName string) float64 {
 		return -1
 	}
 
-	if len(result.Datapoints) == 0 {
-		return 0
+	var sum float64
+	for _, point := range result.Datapoints {
+		sum += *point.SampleCount
 	}
-	return *result.Datapoints[0].SampleCount
+	return sum
 }
