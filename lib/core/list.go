@@ -1,30 +1,31 @@
-package dynamodb
+package core
 
 import (
-	"fmt"
-	"github.com/ararog/timeago"
-	"github.com/olekukonko/tablewriter"
 	"io"
 	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/olekukonko/tablewriter"
 )
 
 type List struct {
 	sync.RWMutex
-	items       []*table
+	items       []Resource
 	lastUpdated time.Time
 }
 
 func NewList() *List {
-	return &List{
-		items: make([]*table, 0),
-	}
+	return &List{}
 }
 
-func (l *List) Get() []*table {
+func (l *List) Add(r Resource) {
+	l.items = append(l.items, r)
+	l.lastUpdated = time.Now()
+}
+func (l *List) Get() []Resource {
 	l.RLock()
 	i := l.items
 	l.RUnlock()
@@ -39,22 +40,15 @@ func (l *List) Set(list *List) {
 }
 
 func (l *List) Ftable(w io.Writer) {
-	table := tablewriter.NewWriter(w)
-	table.SetHeader([]string{"DynamoDB Name", "Throttled read events (60min)", "Throttled write events (60min)", "Entries", "Launched", "Region"})
+	output := tablewriter.NewWriter(w)
+	if len(l.items) > 0 {
+		output.SetHeader(l.items[0].Headers())
+	}
 	sort.Sort(l)
 	for _, i := range l.items {
-		launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *i.LaunchTime)
-		row := []string{
-			i.Name,
-			fmt.Sprintf("%.0f", i.ReadThrottleEvents),
-			fmt.Sprintf("%.0f", i.WriteThrottleEvents),
-			fmt.Sprintf("%d", i.Items),
-			launchedAgo,
-			i.Region,
-		}
-		table.Append(row)
+		output.Append(i.Row())
 	}
-	table.Render()
+	output.Render()
 }
 
 func (l *List) Updated() time.Time {
@@ -67,10 +61,13 @@ func (l *List) Len() int {
 func (l *List) Swap(i, j int) {
 	l.items[i], l.items[j] = l.items[j], l.items[i]
 }
+
+var r = regexp.MustCompile(`[^0-9]+|[0-9]+`)
+
 func (l *List) Less(i, j int) bool {
 
-	spliti := r.FindAllString(strings.Replace(l.items[i].Name, " ", "", -1), -1)
-	splitj := r.FindAllString(strings.Replace(l.items[j].Name, " ", "", -1), -1)
+	spliti := r.FindAllString(strings.Replace(l.items[i].Name(), " ", "", -1), -1)
+	splitj := r.FindAllString(strings.Replace(l.items[j].Name(), " ", "", -1), -1)
 
 	for index := 0; index < len(spliti) && index < len(splitj); index++ {
 		if spliti[index] != splitj[index] {
@@ -100,15 +97,13 @@ func (l *List) Less(i, j int) bool {
 	}
 	// Fall back for cases where space characters have been annihliated by the replacment call
 	// Here we iterate over the unmolsested string and prioritize numbers over
-	for index := 0; index < len(l.items[i].Name) && index < len(l.items[j].Name); index++ {
-		if isNumber(l.items[i].Name[index]) || isNumber(l.items[j].Name[index]) {
-			return isNumber(l.items[i].Name[index])
+	for index := 0; index < len(l.items[i].Name()) && index < len(l.items[j].Name()); index++ {
+		if isNumber(l.items[i].Name()[index]) || isNumber(l.items[j].Name()[index]) {
+			return isNumber(l.items[i].Name()[index])
 		}
 	}
-	return l.items[i].Name < l.items[j].Name
+	return l.items[i].Name() < l.items[j].Name()
 }
-
-var r = regexp.MustCompile(`[^0-9]+|[0-9]+`)
 
 func isNumber(input uint8) bool {
 	return input >= '0' && input <= '9'

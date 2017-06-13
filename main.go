@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stojg/aunt/lib/core"
 	"github.com/stojg/aunt/lib/dynamodb"
 	"github.com/stojg/aunt/lib/ec2"
 	"github.com/stojg/aunt/lib/rds"
 	"github.com/urfave/cli"
-	"net/http"
-	"os"
-	"time"
 )
 
 var (
@@ -32,6 +33,8 @@ var regions = []*string{
 	aws.String("sa-east-1"),
 }
 
+var roles = []string{}
+
 func main() {
 
 	app := cli.NewApp()
@@ -49,7 +52,7 @@ SUPPORT:  http://github.com/stojg/aunt
 			Name:  "dynamodb",
 			Usage: "show DynamoDB statistics",
 			Action: func(c *cli.Context) error {
-				dynamodb.Get(regions).Ftable(os.Stdout)
+				dynamodb.Get(regions, roles).Ftable(os.Stdout)
 				return nil
 			},
 		},
@@ -57,7 +60,7 @@ SUPPORT:  http://github.com/stojg/aunt
 			Name:  "ec2",
 			Usage: "show EC2 statistics",
 			Action: func(c *cli.Context) error {
-				ec2.Get(regions).Ftable(os.Stdout)
+				ec2.Get(regions, roles).Ftable(os.Stdout)
 				return nil
 			},
 		},
@@ -65,7 +68,7 @@ SUPPORT:  http://github.com/stojg/aunt
 			Name:  "rds",
 			Usage: "show RDS statistics",
 			Action: func(c *cli.Context) error {
-				rds.Get(regions).Ftable(os.Stdout)
+				rds.Get(regions, roles).Ftable(os.Stdout)
 				return nil
 			},
 		},
@@ -83,18 +86,18 @@ SUPPORT:  http://github.com/stojg/aunt
 }
 
 func serve(c *cli.Context) error {
-	instances := ec2.NewList()
-	tables := dynamodb.NewList()
-	dbs := rds.NewList()
+	instances := core.NewList()
+	tables := core.NewList()
+	dbs := core.NewList()
 	resourceTicker := time.NewTicker(time.Duration(c.Int("refresh")) * time.Minute)
 	go func() {
-		tables.Set(dynamodb.Get(regions))
-		instances.Set(ec2.Get(regions))
-		dbs.Set(rds.Get(regions))
+		tables.Set(dynamodb.Get(regions, roles))
+		instances.Set(ec2.Get(regions, roles))
+		dbs.Set(rds.Get(regions, roles))
 		for range resourceTicker.C {
-			tables.Set(dynamodb.Get(regions))
-			instances.Set(ec2.Get(regions))
-			dbs.Set(rds.Get(regions))
+			tables.Set(dynamodb.Get(regions, roles))
+			instances.Set(ec2.Get(regions, roles))
+			dbs.Set(rds.Get(regions, roles))
 		}
 	}()
 
