@@ -1,0 +1,18 @@
+package: github.com/stojg/aunt
+import:
+- package: github.com/ararog/timeago
+  version: ~0.0.1
+- package: github.com/aws/aws-sdk-go
+  version: ~1.8.41
+  subpackages:
+  - aws
+  - aws/client
+  - aws/credentials/stscreds
+  - aws/session
+  - service/cloudwatch
+  - service/dynamodb
+  - service/ec2
+  - service/rds
+- package: github.com/olekukonko/tablewriter
+- package: github.com/urfave/cli
+  version: ~1.19.1
