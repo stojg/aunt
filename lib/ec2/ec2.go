@@ -8,83 +8,61 @@ import (
 	"github.com/ararog/timeago"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/stojg/aunt/lib/core"
 )
 
-func Get(regions []*string, roles []string) *core.List {
-	resourceChans := make([]chan core.Resource, 0)
-	for _, roleARN := range roles {
-		for _, region := range regions {
-			resourceChans = append(resourceChans, fetchInstances(region, roleARN))
-		}
-	}
-	list := core.NewList()
-	for i := range core.Filter(core.Metrics(core.Merge(resourceChans))) {
-		list.Add(i)
-	}
-	return list
+func Headers() []string {
+	return []string{"Instance Name", "Credits", "CPU %", "Type", "ResourceID", "Launched", "Region"}
 }
 
-func fetchInstances(region *string, roleARN string) chan core.Resource {
+func Fetch(region, account, roleARN string) chan core.Resource {
 	resources := make(chan core.Resource)
 	go func() {
-		describeInstances(region, roleARN, resources)
+		sess, config := core.NewConfig(region, roleARN)
+		svc := ec2.New(sess, config)
+		resp, err := svc.DescribeInstances(&ec2.DescribeInstancesInput{
+			Filters: []*ec2.Filter{
+				{
+					Name: aws.String("instance-type"),
+					Values: []*string{
+						aws.String("t2.nano"),
+						aws.String("t2.micro"),
+						aws.String("t2.small"),
+						aws.String("t2.medium"),
+						aws.String("t2.large"),
+						aws.String("t2.xlarge"),
+						aws.String("t2.2xlarge"),
+					},
+				},
+				{
+					Name:   aws.String("instance-state-name"),
+					Values: []*string{aws.String("running")},
+				},
+			},
+		})
+		if err != nil {
+			fmt.Printf("ec2.describeInstances %s %s %v\n", roleARN, region, err)
+			return
+		}
+		for idx := range resp.Reservations {
+			for _, ec2Inst := range resp.Reservations[idx].Instances {
+				resources <- newInstance(ec2Inst, sess, config)
+			}
+		}
 		close(resources)
 	}()
 	return resources
 }
 
-func describeInstances(region *string, roleARN string, resources chan core.Resource) {
-	sess := session.Must(session.NewSession())
-	config := &aws.Config{Region: region, Credentials: stscreds.NewCredentials(sess, roleARN)}
-	svc := ec2.New(sess, config)
-	resp, err := svc.DescribeInstances(&ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
-			{
-				Name: aws.String("instance-type"),
-				Values: []*string{
-					aws.String("t2.nano"),
-					aws.String("t2.micro"),
-					aws.String("t2.small"),
-					aws.String("t2.medium"),
-					aws.String("t2.large"),
-					aws.String("t2.xlarge"),
-					aws.String("t2.2xlarge"),
-				},
-			},
-			{
-				Name: aws.String("instance-state-name"),
-				Values: []*string{
-					aws.String("running"),
-				},
-			},
-		},
-	})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	for idx := range resp.Reservations {
-		for _, ec2Inst := range resp.Reservations[idx].Instances {
-			resources <- newInstance(ec2Inst, sess, config)
-		}
-	}
-}
-
 func newInstance(i *ec2.Instance, sess client.ConfigProvider, config *aws.Config) core.Resource {
-	cw := cloudwatch.New(sess, config)
-
-	r := &instance{
+	inst := &instance{
 		ResourceID:   *i.InstanceId,
 		Region:       *config.Region,
-		cw:           cw,
 		InstanceType: *i.InstanceType,
-		State:        *i.State.Name,
 		LaunchTime:   i.LaunchTime,
+		state:        *i.State.Name,
 		namespace:    aws.String("AWS/EC2"),
 		dimensions: []*cloudwatch.Dimension{
 			{
@@ -92,47 +70,41 @@ func newInstance(i *ec2.Instance, sess client.ConfigProvider, config *aws.Config
 				Value: i.InstanceId,
 			},
 		},
+		cw: cloudwatch.New(sess, config),
 	}
-	if strings.HasPrefix(r.InstanceType, "t2") {
-		r.Burstable = true
+	if strings.HasPrefix(inst.InstanceType, "t2") {
+		inst.burstable = true
 	}
 
 	for _, tag := range i.Tags {
 		if *tag.Key == "Name" && len(*tag.Value) > 0 {
-			r.name = *tag.Value
+			inst.Name = *tag.Value
 			break
 		}
 	}
-	return r
+	return inst
 }
 
 type instance struct {
+	Name             string
 	ResourceID       string
 	LaunchTime       *time.Time
-	name             string
-	InstanceType     string
 	Region           string
-	State            string
-	Burstable        bool
+	InstanceType     string
 	CPUUtilization   float64
 	CPUCreditBalance float64
-	namespace        *string
-	dimensions       []*cloudwatch.Dimension
-	cw               *cloudwatch.CloudWatch
-}
 
-func (i *instance) Name() string {
-	return i.name
-}
-
-func (i *instance) Headers() []string {
-	return []string{"Instance Name", "Credits", "CPU %", "Type", "ResourceID", "Launched", "Region"}
+	state      string
+	burstable  bool
+	namespace  *string
+	dimensions []*cloudwatch.Dimension
+	cw         *cloudwatch.CloudWatch
 }
 
 func (i *instance) Row() []string {
 	launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *i.LaunchTime)
 	return []string{
-		i.name,
+		i.Name,
 		fmt.Sprintf("%.2f", i.CPUCreditBalance),
 		fmt.Sprintf("%.2f", i.CPUUtilization),
 		i.InstanceType,
@@ -143,14 +115,14 @@ func (i *instance) Row() []string {
 }
 
 func (i *instance) Display() bool {
-	return i.CPUCreditBalance < 10
+	return i.CPUCreditBalance < 10 && i.CPUCreditBalance > 0
 }
 
 func (i *instance) SetMetrics() {
-	if i.State != "running" {
+	if i.state != "running" {
 		return
 	}
-	if !i.Burstable {
+	if !i.burstable {
 		return
 	}
 
@@ -172,7 +144,7 @@ func (i *instance) getMetric(metricName string, cw *cloudwatch.CloudWatch) float
 	}
 	result, err := cw.GetMetricStatistics(input)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("ec2.getMetric %s %v\n", i.Region, err)
 		return -1
 	}
 	if len(result.Datapoints) == 0 {

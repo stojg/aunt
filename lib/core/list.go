@@ -2,109 +2,92 @@ package core
 
 import (
 	"io"
-	"regexp"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
+	"encoding/json"
+	"fmt"
+
+	"github.com/ararog/timeago"
 	"github.com/olekukonko/tablewriter"
 )
 
+type fetchFunc func(region, account, roleARN string) chan Resource
+
 type List struct {
-	sync.RWMutex
-	items       []Resource
+	headers     []string
+	fetcher     fetchFunc
 	lastUpdated time.Time
+
+	sync.RWMutex
+	items []Resource
 }
 
-func NewList() *List {
-	return &List{}
+func NewList(headers []string, f fetchFunc) *List {
+	return &List{
+		headers: headers,
+		fetcher: f,
+	}
 }
 
-func (l *List) Add(r Resource) {
-	l.items = append(l.items, r)
-	l.lastUpdated = time.Now()
-}
-func (l *List) Get() []Resource {
-	l.RLock()
-	i := l.items
-	l.RUnlock()
-	return i
-}
+func (l *List) Update(roles map[string]string, regions []string) *List {
+	resourceChans := make([]chan Resource, 0)
+	for account, roleARN := range roles {
+		for _, region := range regions {
+			time.Sleep(time.Second)
+			resourceChans = append(resourceChans, l.fetcher(region, account, roleARN))
+		}
+	}
 
-func (l *List) Set(list *List) {
+	var resources []Resource
+	for i := range Filter(Metrics(Merge(resourceChans))) {
+		resources = append(resources, i)
+	}
 	l.Lock()
-	l.items = list.Get()
+	l.items = resources
 	l.lastUpdated = time.Now()
 	l.Unlock()
-}
-
-func (l *List) Ftable(w io.Writer) {
-	output := tablewriter.NewWriter(w)
-	if len(l.items) > 0 {
-		output.SetHeader(l.items[0].Headers())
-	}
-	sort.Sort(l)
-	for _, i := range l.items {
-		output.Append(i.Row())
-	}
-	output.Render()
-}
-
-func (l *List) Updated() time.Time {
-	return l.lastUpdated
+	return l
 }
 
 func (l *List) Len() int {
 	return len(l.items)
 }
-func (l *List) Swap(i, j int) {
-	l.items[i], l.items[j] = l.items[j], l.items[i]
+
+func (l *List) Updated() string {
+	ago, _ := timeago.TimeAgoWithTime(time.Now(), l.lastUpdated)
+	return ago
 }
 
-var r = regexp.MustCompile(`[^0-9]+|[0-9]+`)
-
-func (l *List) Less(i, j int) bool {
-
-	spliti := r.FindAllString(strings.Replace(l.items[i].Name(), " ", "", -1), -1)
-	splitj := r.FindAllString(strings.Replace(l.items[j].Name(), " ", "", -1), -1)
-
-	for index := 0; index < len(spliti) && index < len(splitj); index++ {
-		if spliti[index] != splitj[index] {
-			// Both slices are numbers
-			if isNumber(spliti[index][0]) && isNumber(splitj[index][0]) {
-				// Remove Leading Zeroes
-				stringi := strings.TrimLeft(spliti[index], "0")
-				stringj := strings.TrimLeft(splitj[index], "0")
-				if len(stringi) == len(stringj) {
-					for indexchar := 0; indexchar < len(stringi); indexchar++ {
-						if stringi[indexchar] != stringj[indexchar] {
-							return stringi[indexchar] < stringj[indexchar]
-						}
-					}
-					return len(spliti[index]) < len(splitj[index])
-				}
-				return len(stringi) < len(stringj)
-			}
-			// One of the slices is a number (we give precedence to numbers regardless of ASCII table position)
-			if isNumber(spliti[index][0]) || isNumber(splitj[index][0]) {
-				return isNumber(spliti[index][0])
-			}
-			// Both slices are not numbers
-			return spliti[index] < splitj[index]
-		}
-
+func (l *List) Fjson(w io.Writer) {
+	l.Lock()
+	res, err := json.MarshalIndent(l.items, "", "\t")
+	l.Unlock()
+	if err != nil {
+		panic(err)
 	}
-	// Fall back for cases where space characters have been annihliated by the replacment call
-	// Here we iterate over the unmolsested string and prioritize numbers over
-	for index := 0; index < len(l.items[i].Name()) && index < len(l.items[j].Name()); index++ {
-		if isNumber(l.items[i].Name()[index]) || isNumber(l.items[j].Name()[index]) {
-			return isNumber(l.items[i].Name()[index])
-		}
-	}
-	return l.items[i].Name() < l.items[j].Name()
+	fmt.Fprintf(w, "%s", res)
 }
 
-func isNumber(input uint8) bool {
-	return input >= '0' && input <= '9'
+func (l *List) Ftable(w io.Writer) {
+	output := tablewriter.NewWriter(w)
+	output.SetHeader(l.headers)
+	l.Lock()
+	var rows [][]string
+	for _, i := range l.items {
+		rows = append(rows, i.Row())
+	}
+
+	sort.Sort(sortRows(rows))
+
+	output.AppendBulk(rows)
+	l.Unlock()
+	output.Render()
 }
+
+type sortRows [][]string
+
+func (l sortRows) Len() int           { return len(l) }
+func (l sortRows) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+func (l sortRows) Less(i, j int) bool { return l[i][0] < l[j][0] }

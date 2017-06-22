@@ -1,10 +1,11 @@
 package core
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type Resource interface {
-	Name() string
-	Headers() []string
 	Row() []string
 	Display() bool
 	SetMetrics()
@@ -37,6 +38,7 @@ func Metrics(in chan Resource) chan Resource {
 	go func() {
 		for resource := range in {
 			resource.SetMetrics()
+			time.Sleep(time.Millisecond * 200) // mitigate api rate-limiting
 			out <- resource
 		}
 		close(out)
@@ -44,6 +46,7 @@ func Metrics(in chan Resource) chan Resource {
 	return out
 }
 
+// Filter asks the resources if they should be displayed
 func Filter(in chan Resource) chan Resource {
 	out := make(chan Resource)
 	go func() {

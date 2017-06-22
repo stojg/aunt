@@ -1,10 +1,10 @@
 hash: 6e71893027c2fddad2779f8241a91f9f53ff4197ef2e0d693ada19f13330cbe9
-updated: 2017-06-14T13:01:49.164910623+12:00
+updated: 2017-06-21T13:33:24.395039091+12:00
 imports:
 - name: github.com/ararog/timeago
   version: 518814407569bf983ea81e1bf8b550dd4e7b34f3
 - name: github.com/aws/aws-sdk-go
-  version: 47ba3b0518c83189f3a1c95d20fc22f267e02ed3
+  version: 96358b8282b1a3aa66836d2f2fe66216cc419668
   subpackages:
   - aws
   - aws/awserr

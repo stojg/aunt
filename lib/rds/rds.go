@@ -8,48 +8,31 @@ import (
 	"github.com/ararog/timeago"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/stojg/aunt/lib/core"
 )
 
-func Get(regions []*string, roles []string) *core.List {
-	resourceChans := make([]chan core.Resource, 0)
-	for _, roleARN := range roles {
-		for _, region := range regions {
-			resourceChans = append(resourceChans, fetchDatabases(region, roleARN))
-		}
-	}
-	list := core.NewList()
-	for i := range core.Filter(core.Metrics(core.Merge(resourceChans))) {
-		list.Add(i)
-	}
-	return list
+func Headers() []string {
+	return []string{"RDS Name", "Credits", "CPU %", "Type", "ResourceID", "Launched", "Region"}
 }
 
-func fetchDatabases(region *string, roleARN string) chan core.Resource {
+func Fetch(region, account, roleARN string) chan core.Resource {
 	resources := make(chan core.Resource)
 	go func() {
-		describeRDSes(region, roleARN, resources)
+		sess, config := core.NewConfig(region, roleARN)
+		svc := rds.New(sess, config)
+		resp, err := svc.DescribeDBInstances(nil)
+		if err != nil {
+			fmt.Printf("rds.describeRDSes %s %s %v\n", roleARN, region, err)
+			return
+		}
+		for _, db := range resp.DBInstances {
+			resources <- newRDS(db, sess, config)
+		}
 		close(resources)
 	}()
 	return resources
-}
-
-func describeRDSes(region *string, roleARN string, resources chan core.Resource) {
-	sess := session.Must(session.NewSession())
-	config := &aws.Config{Region: region, Credentials: stscreds.NewCredentials(sess, roleARN)}
-	svc := rds.New(sess, config)
-	resp, err := svc.DescribeDBInstances(nil)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	for _, db := range resp.DBInstances {
-		resources <- newRDS(db, sess, config)
-	}
 }
 
 func newRDS(db *rds.DBInstance, sess client.ConfigProvider, config *aws.Config) *database {
@@ -58,9 +41,9 @@ func newRDS(db *rds.DBInstance, sess client.ConfigProvider, config *aws.Config) 
 		ResourceID:   *db.DBInstanceIdentifier,
 		Region:       *config.Region,
 		InstanceType: *db.DBInstanceClass,
-		State:        *db.DBInstanceStatus,
+		state:        *db.DBInstanceStatus,
 		LaunchTime:   db.InstanceCreateTime,
-		name:         strings.Replace(*db.DBInstanceIdentifier, "-", ".", -1) + ".db",
+		Name:         strings.Replace(*db.DBInstanceIdentifier, "-", ".", -1) + ".db",
 		namespace:    aws.String("AWS/RDS"),
 		dimensions: []*cloudwatch.Dimension{
 			{
@@ -70,49 +53,31 @@ func newRDS(db *rds.DBInstance, sess client.ConfigProvider, config *aws.Config) 
 		},
 	}
 	if strings.Contains(*db.DBInstanceClass, "t2") {
-		r.Burstable = true
+		r.burstable = true
 	}
 	return r
 }
 
 type database struct {
+	Name             string
 	ResourceID       string
 	LaunchTime       *time.Time
-	name             string
-	InstanceType     string
 	Region           string
-	State            string
-	Burstable        bool
+	InstanceType     string
 	CPUUtilization   float64
 	CPUCreditBalance float64
-	namespace        *string
-	dimensions       []*cloudwatch.Dimension
-	cw               *cloudwatch.CloudWatch
-}
 
-func (i *database) Name() string {
-	return i.name
-}
-
-func (i *database) Headers() []string {
-	return []string{"RDS name", "Credits", "CPU %", "Type", "ResourceID", "Launched", "Region"}
-}
-
-func (d *database) SetMetrics() {
-	if d.State != "available" {
-		return
-	}
-	if !d.Burstable {
-		return
-	}
-	d.CPUUtilization = d.getMetric("CPUUtilization")
-	d.CPUCreditBalance = d.getMetric("CPUCreditBalance")
+	burstable  bool
+	state      string
+	namespace  *string
+	dimensions []*cloudwatch.Dimension
+	cw         *cloudwatch.CloudWatch
 }
 
 func (i *database) Row() []string {
 	launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *i.LaunchTime)
 	return []string{
-		i.name,
+		i.Name,
 		fmt.Sprintf("%.2f", i.CPUCreditBalance),
 		fmt.Sprintf("%.2f", i.CPUUtilization),
 		i.InstanceType,
@@ -123,13 +88,18 @@ func (i *database) Row() []string {
 }
 
 func (d *database) Display() bool {
-	if d.State != "available" {
+	if !d.burstable || d.state != "available" {
 		return false
 	}
-	if !d.Burstable {
-		return false
+	return d.CPUCreditBalance < 10 && d.CPUCreditBalance > 0
+}
+
+func (d *database) SetMetrics() {
+	if !d.burstable || d.state != "available" {
+		return
 	}
-	return d.CPUCreditBalance < 10
+	d.CPUUtilization = d.getMetric("CPUUtilization")
+	d.CPUCreditBalance = d.getMetric("CPUCreditBalance")
 }
 
 func (d *database) getMetric(metricName string) float64 {
@@ -145,11 +115,8 @@ func (d *database) getMetric(metricName string) float64 {
 		},
 	}
 	result, err := d.cw.GetMetricStatistics(input)
-	if err != nil {
-		fmt.Println(err)
-		return -1
-	}
-	if len(result.Datapoints) == 0 {
+	if err != nil || len(result.Datapoints) == 0 {
+		fmt.Printf("rds.getMetric %s %v\n", d.Region, err)
 		return -1
 	}
 	return *result.Datapoints[0].Average
