@@ -3,17 +3,18 @@ BUILDTIME=`date -u +%a,\ %d\ %b\ %Y\ %H:%M:%S\ GMT`
 LDFLAGS=-ldflags "-s -w -X main.Version=${VERSION} -X 'main.Compiled=${BUILDTIME}'"
 BINARY=aunt
 
-PKGS = $(shell go list ./... | grep -v vendor)
+FILES = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 all:
 	go build ${LDFLAGS} -o ${BINARY} .
 
 check:
-	goimports -d $(shell find . -type f -name '*.go' -not -path "./vendor/*")
-	gometalinter --vendor
 	go test . ./lib/...
+	goimports -d $(FILES)
+	gometalinter --vendor . ./lib/...
 
 fix:
+	gofmt -s -w -l $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 	goimports -w $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 

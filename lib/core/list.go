@@ -15,6 +15,7 @@ import (
 
 type fetchFunc func(region, account, roleARN string) chan Resource
 
+// List contains a list of Resources
 type List struct {
 	headers     []string
 	fetcher     fetchFunc
@@ -24,6 +25,7 @@ type List struct {
 	items []Resource
 }
 
+// NewList returns a new List
 func NewList(headers []string, f fetchFunc) *List {
 	return &List{
 		headers: headers,
@@ -31,6 +33,7 @@ func NewList(headers []string, f fetchFunc) *List {
 	}
 }
 
+// Update updates this list in a thread safe way
 func (l *List) Update(roles map[string]string, regions []string) *List {
 	resourceChans := make([]chan Resource, 0)
 	for account, roleARN := range roles {
@@ -51,15 +54,18 @@ func (l *List) Update(roles map[string]string, regions []string) *List {
 	return l
 }
 
+// Len returns the number of items in this list
 func (l *List) Len() int {
 	return len(l.items)
 }
 
+// Updated returns how long ago this list was last updated
 func (l *List) Updated() string {
 	ago, _ := timeago.TimeAgoWithTime(time.Now(), l.lastUpdated)
 	return ago
 }
 
+// Fjson writes a JSON representation of this List
 func (l *List) Fjson(w io.Writer) {
 	l.Lock()
 	res, err := json.MarshalIndent(l.items, "", "\t")
@@ -70,6 +76,7 @@ func (l *List) Fjson(w io.Writer) {
 	fmt.Fprintf(w, "%s", res)
 }
 
+// Ftable writes a string table representation of this List
 func (l *List) Ftable(w io.Writer) {
 	output := tablewriter.NewWriter(w)
 	output.SetHeader(l.headers)

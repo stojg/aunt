@@ -13,10 +13,12 @@ import (
 	"github.com/stojg/aunt/lib/core"
 )
 
+// Headers returns a list of headers for use in a table header
 func Headers() []string {
 	return []string{"Instance Name", "Credits", "CPU %", "Type", "ResourceID", "Launched", "Region"}
 }
 
+// Fetch returns a channel where it will asynchronously will send Resources
 func Fetch(region, account, roleARN string) chan core.Resource {
 	resources := make(chan core.Resource)
 	go func() {

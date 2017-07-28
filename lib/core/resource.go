@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Resource represents a metric resource for use in a List
 type Resource interface {
 	Row() []string
 	Display() bool

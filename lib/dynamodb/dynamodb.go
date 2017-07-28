@@ -12,10 +12,12 @@ import (
 	"github.com/stojg/aunt/lib/core"
 )
 
+// Headers returns a list of headers for use in a table header
 func Headers() []string {
 	return []string{"Table", "Read Capacity", "Sum Throttled Reads (24hr)", "Write Capacity", "Sum Throttled Writes(24hr)", "Entries", "Launched", "Region"}
 }
 
+// Fetch returns a channel where it will asynchronously will send Resources
 func Fetch(region, account, roleARN string) chan core.Resource {
 	out := make(chan core.Resource, 16)
 	go func() {

@@ -13,10 +13,12 @@ import (
 	"github.com/stojg/aunt/lib/core"
 )
 
+// Headers returns a list of headers for use in a table header
 func Headers() []string {
 	return []string{"RDS Name", "Credits", "CPU %", "Type", "ResourceID", "Launched", "Region"}
 }
 
+// Fetch returns a channel where it will asynchronously will send Resources
 func Fetch(region, account, roleARN string) chan core.Resource {
 	resources := make(chan core.Resource)
 	go func() {
@@ -74,16 +76,16 @@ type database struct {
 	cw         *cloudwatch.CloudWatch
 }
 
-func (i *database) Row() []string {
-	launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *i.LaunchTime)
+func (d *database) Row() []string {
+	launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *d.LaunchTime)
 	return []string{
-		i.Name,
-		fmt.Sprintf("%.2f", i.CPUCreditBalance),
-		fmt.Sprintf("%.2f", i.CPUUtilization),
-		i.InstanceType,
-		i.ResourceID,
+		d.Name,
+		fmt.Sprintf("%.2f", d.CPUCreditBalance),
+		fmt.Sprintf("%.2f", d.CPUUtilization),
+		d.InstanceType,
+		d.ResourceID,
 		launchedAgo,
-		i.Region,
+		d.Region,
 	}
 }
 
