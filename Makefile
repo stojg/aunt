@@ -3,8 +3,14 @@ BUILDTIME=`date -u +%a,\ %d\ %b\ %Y\ %H:%M:%S\ GMT`
 LDFLAGS=-ldflags "-s -w -X main.Version=${VERSION} -X 'main.Compiled=${BUILDTIME}'"
 BINARY=aunt
 
+PKGS = $(shell go list ./... | grep -v vendor)
+
 all:
 	go build ${LDFLAGS} -o ${BINARY} .
+
+check:
+	gometalinter --vendor
+
 
 dev:
 	go fmt . ./lib/...

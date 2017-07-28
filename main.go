@@ -17,7 +17,9 @@ import (
 )
 
 var (
+	// Version is used as a compile time flag
 	Version  string
+	// Compiled is used as a compile time flag
 	Compiled string
 )
 
@@ -35,10 +37,6 @@ var regions = []string{
 }
 
 var roles = map[string]string{}
-
-type Config struct {
-	Roles map[string]string
-}
 
 func main() {
 
@@ -99,7 +97,10 @@ SUPPORT:  http://github.com/stojg/aunt
 			Action: serve,
 		},
 	}
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		fmt.Printf("aunt: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 // canConnectToAWS does a simple region less call to AWS to check if we can connect to AWS api and it has the
@@ -187,12 +188,7 @@ func serve(c *cli.Context) error {
 	})
 
 	fmt.Fprintf(os.Stdout, "starting webserver at port %d\n", c.Int("port"))
-	err := http.ListenAndServe(fmt.Sprintf(":%d", c.Int("port")), nil)
-
-	if err != nil {
-		return err
-	}
-	return nil
+	return http.ListenAndServe(fmt.Sprintf(":%d", c.Int("port")), nil)
 }
 
 const indexHTML = `<html lang="en">
