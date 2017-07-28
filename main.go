@@ -18,7 +18,7 @@ import (
 
 var (
 	// Version is used as a compile time flag
-	Version  string
+	Version string
 	// Compiled is used as a compile time flag
 	Compiled string
 )

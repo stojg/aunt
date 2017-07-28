@@ -9,13 +9,13 @@ all:
 	go build ${LDFLAGS} -o ${BINARY} .
 
 check:
+	goimports -d $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 	gometalinter --vendor
-
-
-dev:
-	go fmt . ./lib/...
-	go vet . ./lib/...
 	go test . ./lib/...
+
+fix:
+	goimports -w $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+
 
 install: dev
 	go install ${LDFLAGS} .
