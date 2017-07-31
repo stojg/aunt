@@ -17,11 +17,10 @@ fix:
 	gofmt -s -w -l $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 	goimports -w $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
-
 install: dev
 	go install ${LDFLAGS} .
 
-release: dev
+release: check
 	GOOS=linux GOARCH=amd64 go build -o ${BINARY}_linux ${LDFLAGS} .
 	#GOOS=windows GOARCH=amd64 go build -o ${BINARY}_windows ${LDFLAGS} .
 	#GOOS=darwin GOARCH=amd64 go build -o ${BINARY}_darwin ${LDFLAGS} .

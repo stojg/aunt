@@ -6,6 +6,9 @@ import (
 	"os"
 	"time"
 
+	"encoding/json"
+	"io/ioutil"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/stojg/aunt/lib/core"
@@ -38,6 +41,11 @@ var regions = []string{
 
 var roles = map[string]string{}
 
+// Config holds configuration data, typically loaded from a file
+type Config struct {
+	Roles map[string]string
+}
+
 func main() {
 
 	app := cli.NewApp()
@@ -50,11 +58,24 @@ COMPILED: {{.Compiled}}
 SUPPORT:  http://github.com/stojg/aunt
 `, cli.AppHelpTemplate)
 
+	app.Flags = []cli.Flag{
+		cli.StringFlag{Name: "config", Value: "/etc/aunt.json", Usage: "path to config file"},
+	}
+
+	app.Before = func(c *cli.Context) error {
+		cfg, err := LoadConfig(c.GlobalString("config"))
+		if err == nil {
+			roles = cfg.Roles
+		}
+		return err
+	}
+
 	app.Commands = []cli.Command{
 		{
 			Name:  "dynamodb",
 			Usage: "show DynamoDB statistics",
 			Action: func(c *cli.Context) error {
+
 				tables := core.NewList(dynamodb.Headers(), dynamodb.Fetch)
 				tables.Update(roles, regions).Ftable(os.Stdout)
 				return nil
@@ -101,6 +122,20 @@ SUPPORT:  http://github.com/stojg/aunt
 		fmt.Printf("aunt: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// LoadConfig loads and json configuration file into Config struct
+func LoadConfig(file string) (*Config, error) {
+	cfg := &Config{}
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(b, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 // canConnectToAWS does a simple region less call to AWS to check if we can connect to AWS api and it has the
