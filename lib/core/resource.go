@@ -1,62 +1,58 @@
 package core
 
 import (
-	"sync"
-	"time"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-// Resource represents a metric resource for use in a List
-type Resource interface {
-	Row() []string
-	Display() bool
-	SetMetrics()
+type RowSorter [][]string
+
+func (l RowSorter) Len() int           { return len(l) }
+func (l RowSorter) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+func (l RowSorter) Less(i, j int) bool { return l[i][0] < l[j][0] }
+
+// NewConfig returns a AWS session and connection Config
+func NewCredentials(region, roleARN string) (*session.Session, *aws.Config) {
+	regionPtr := aws.String(region)
+	sess := session.Must(session.NewSession(&aws.Config{Region: regionPtr, CredentialsChainVerboseErrors: aws.Bool(true)}))
+	config := &aws.Config{Credentials: stscreds.NewCredentials(sess, roleARN), Region: regionPtr}
+	return sess, config
 }
 
-// Merge merges (zip) a slice of resource channels into one single out channel
-func Merge(in []chan Resource) chan Resource {
-	var wg sync.WaitGroup
-	out := make(chan Resource)
-	output := func(c chan Resource) {
-		for resource := range c {
-			out <- resource
+func TagValue(key string, tags []*ec2.Tag) string {
+	for _, tag := range tags {
+		if *tag.Key == key && len(*tag.Value) > 0 {
+			return *tag.Value
 		}
-		wg.Done()
 	}
-	wg.Add(len(in))
-	for _, c := range in {
-		go output(c)
+	return ""
+}
+
+type keyValue struct {
+	Key   string
+	Value string
+}
+
+type KeyValue []keyValue
+
+func (r *KeyValue) Add(key, value string) {
+	*r = append(*r, keyValue{Key: key, Value: value})
+}
+
+func (r KeyValue) Keys() []string {
+	var k []string
+	for _, kv := range r {
+		k = append(k, kv.Key)
 	}
-	go func() {
-		wg.Wait()
-		close(out)
-	}()
-	return out
+	return k
 }
 
-// Metrics tells the resources to update their metrics
-func Metrics(in chan Resource) chan Resource {
-	out := make(chan Resource)
-	go func() {
-		for resource := range in {
-			resource.SetMetrics()
-			time.Sleep(time.Millisecond * 200) // mitigate api rate-limiting
-			out <- resource
-		}
-		close(out)
-	}()
-	return out
-}
-
-// Filter asks the resources if they should be displayed
-func Filter(in chan Resource) chan Resource {
-	out := make(chan Resource)
-	go func() {
-		for resource := range in {
-			if resource.Display() {
-				out <- resource
-			}
-		}
-		close(out)
-	}()
-	return out
+func (r KeyValue) Values() []string {
+	var v []string
+	for _, kv := range r {
+		v = append(v, kv.Value)
+	}
+	return v
 }

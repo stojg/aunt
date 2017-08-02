@@ -11,13 +11,13 @@ all:
 check:
 	go test . ./lib/...
 	goimports -d $(FILES)
-	gometalinter --vendor . ./lib/...
+	gometalinter --deadline 20s --vendor . ./lib/...
 
 fix:
 	gofmt -s -w -l $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 	goimports -w $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
-install: dev
+install: check
 	go install ${LDFLAGS} .
 
 release: check

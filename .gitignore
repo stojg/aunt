@@ -1,6 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 
-aunt.json
+*.json
+*.db
 
 ### Go template
 # Binaries for programs and plugins
