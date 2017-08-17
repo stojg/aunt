@@ -187,6 +187,9 @@ SUPPORT:  http://github.com/stojg/aunt
 			Action: func(c *cli.Context) error {
 				resourceTicker := time.NewTicker(10 * time.Minute)
 				for {
+					if err := asg.Update(db, roles, regions); err != nil {
+						return fmt.Errorf("error during update: %v", err)
+					}
 					if err := ec2.Update(db, roles, regions); err != nil {
 						fmt.Printf("error during update: %v", err)
 					}
