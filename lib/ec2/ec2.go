@@ -35,7 +35,7 @@ const (
 
 const (
 	MetricsCreditsThreshold float64 = 10
-	MetricsCPUThreshold     float64 = 80.0
+	MetricsCPUThreshold     float64 = 90.0
 )
 
 var metrics = []string{MetricCredits, MetricsCPU}
