@@ -75,14 +75,19 @@ func (a *Alert) Save(db *storm.DB) error {
 	if alertCli == nil {
 		return nil
 	}
+
+	if len(a.Description) > 5000 {
+		a.Description = a.Description[0:4999]
+	}
 	_, err := alertCli.Create(alertsv2.CreateAlertRequest{
-		Message:  a.Message,
-		Alias:    a.ID,
-		Details:  a.Details,
-		Entity:   a.Entity,
-		Source:   "aunt ",
-		Priority: alertsv2.P2,
-		Tags:     []string{"SSP"},
+		Message:     a.Message,
+		Alias:       a.ID,
+		Details:     a.Details,
+		Description: a.Description,
+		Entity:      a.Entity,
+		Source:      "aunt ",
+		Priority:    alertsv2.P2,
+		Tags:        []string{"SSP"},
 	})
 	return err
 }
