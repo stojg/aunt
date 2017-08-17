@@ -159,7 +159,7 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 			balance := volume.Metrics[MetricBurstBalance]
 			if balance != nil && *balance < MetricBurstBalanceThreshold {
 				alert := core.NewAlert(MetricBurstBalance, volume.ResourceID)
-				alert.Message = fmt.Sprintf("Burst balance credits (%.1f) is below %.1f for %s", *balance, MetricBurstBalanceThreshold, volume.Name)
+				alert.Message = fmt.Sprintf("Burst balance (%.1f%%) is below %.1f%% for volume %s", *balance, MetricBurstBalanceThreshold, volume.Name)
 				alert.Details["account"] = volume.Account
 				alert.Details["region"] = volume.Region
 				alert.Details["resource_id"] = volume.ResourceID
