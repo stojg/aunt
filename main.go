@@ -16,6 +16,7 @@ import (
 
 	"github.com/asdine/storm"
 	"github.com/olekukonko/tablewriter"
+	"github.com/stojg/aunt/lib/asg"
 	"github.com/urfave/cli"
 )
 
@@ -83,6 +84,9 @@ SUPPORT:  http://github.com/stojg/aunt
 			Name:  "update",
 			Usage: "update a metrics",
 			Action: func(c *cli.Context) error {
+				if err := asg.Update(db, roles, regions); err != nil {
+					return fmt.Errorf("error during update: %v", err)
+				}
 				if err := ec2.Update(db, roles, regions); err != nil {
 					return fmt.Errorf("error during update: %v", err)
 				}
