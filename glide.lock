@@ -1,8 +1,6 @@
-hash: ea495fe81343532d693c044a4dc27b197405e119b1abb70f511ed2e631a96ad9
-updated: 2017-08-07T12:15:23.920472883+12:00
+hash: 7dfe34c8a933bf0af48d2cc5e29bc6cd0d2ebbe7f1e912c4ecf304d204242278
+updated: 2017-08-21T10:52:23.252306311+12:00
 imports:
-- name: github.com/ararog/timeago
-  version: 518814407569bf983ea81e1bf8b550dd4e7b34f3
 - name: github.com/asdine/storm
   version: e35194f772fef1442e9f6c8526a6c115ca729638
   subpackages:
@@ -12,7 +10,7 @@ imports:
   - internal
   - q
 - name: github.com/aws/aws-sdk-go
-  version: b33b08175d12b795daa7726c5577b39d06a2551c
+  version: 3546c9128687af50e4bcedac5b1ffdd593db0c83
   subpackages:
   - aws
   - aws/awserr
@@ -39,6 +37,7 @@ imports:
   - private/protocol/query/queryutil
   - private/protocol/rest
   - private/protocol/xml/xmlutil
+  - service/autoscaling
   - service/cloudwatch
   - service/dynamodb
   - service/ec2
@@ -58,14 +57,9 @@ imports:
   - query
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
-- name: github.com/mattn/go-runewidth
-  version: 9e777a8366cce605130a531d2cd6363d07ad7317
-- name: github.com/olekukonko/tablewriter
-  version: be5337e7b39e64e5f91445ce7e721888dbab7387
 - name: github.com/opsgenie/opsgenie-go-sdk
   version: 75d4f6257bfbea787c5c362f5116c328f401b43e
   subpackages:
-  - _samples/constants
   - alerts
   - alertsv2
   - alertsv2/savedsearches
@@ -81,9 +75,9 @@ imports:
   - team
   - user
 - name: github.com/urfave/cli
-  version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
+  version: cfb38830724cc34fedffe9a2a29fb54fa9169cd1
 - name: golang.org/x/sys
-  version: d8f5ea21b9295e315e612b4bcf4bedea93454d4d
+  version: 43e60d72a8e2bd92ee98319ba9a384a0e9837c08
   subpackages:
   - unix
 testImports: []

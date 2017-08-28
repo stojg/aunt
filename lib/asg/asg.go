@@ -5,13 +5,15 @@ import (
 	"sync"
 	"time"
 
+	"strings"
+
 	"github.com/asdine/storm"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/stojg/aunt/lib/core"
-	//"strings"
 )
 
+// AutoScalingGroup contains app specific data for auto scaling groups
 type AutoScalingGroup struct {
 	Name        string
 	ResourceID  string `storm:"id"`
@@ -22,13 +24,14 @@ type AutoScalingGroup struct {
 }
 
 const (
-	MetricNumEvents = "NumScalingEvents"
+	metricNumEvents = "NumScalingEvents"
 )
 
 const (
-	MetricNumEventsThreshold float64 = 10
+	metricNumEventsThreshold float64 = 6
 )
 
+// Update will update the database with AutoScalingGroup data
 func Update(db *storm.DB, roles map[string]string, regions []string) error {
 	var wg sync.WaitGroup
 	wg.Add(len(roles))
@@ -75,14 +78,19 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 				Metrics:     make(map[string]*float64),
 			}
 
-			asg.Metrics[MetricNumEvents] = aws.Float64(0)
+			asg.Metrics[metricNumEvents] = aws.Float64(0)
 
-			since := time.Now().Add(-3 * time.Hour)
+			since := time.Now().Add(-2 * time.Hour)
 			description := ""
-			for _, act := range resp.Activities {
-				if act.StartTime.After(since) {
-					*asg.Metrics[MetricNumEvents]++
-					description = fmt.Sprintf("%s %s - %s\n", description, act.StartTime.Local(), *act.Description)
+			for _, a := range resp.Activities {
+				if a.StartTime.After(since) {
+					if a.Cause != nil {
+						if !strings.Contains(*a.Cause, "user request") && !strings.Contains(*a.Cause, "a scheduled action update") {
+							*asg.Metrics[metricNumEvents]++
+							description = fmt.Sprintf("%s %s - %s\n", description, a.StartTime.Local(), *a.Description)
+							description = fmt.Sprintf("%s %s - %s\n", description, a.StartTime.Local(), *a.Cause)
+						}
+					}
 				}
 			}
 
@@ -90,13 +98,13 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 				fmt.Printf("%+v\n", err)
 			}
 
-			if *asg.Metrics[MetricNumEvents] >= MetricNumEventsThreshold {
-				alert := core.NewAlert(MetricNumEvents, asg.ResourceID)
-				alert.Message = fmt.Sprintf("ASG %s has %0.f scaling events in the last 3 hours, threshold %.0f", asg.Name, *asg.Metrics[MetricNumEvents], MetricNumEventsThreshold)
+			if *asg.Metrics[metricNumEvents] >= metricNumEventsThreshold {
+				alert := core.NewAlert(metricNumEvents, asg.ResourceID)
+				alert.Message = fmt.Sprintf("ASG %s has %0.f unexpected events in the last 2 hours, threshold %.0f", asg.Name, *asg.Metrics[metricNumEvents], metricNumEventsThreshold)
 				alert.Details["account"] = asg.Account
 				alert.Details["region"] = asg.Region
 				alert.Details["resource_id"] = asg.ResourceID
-				alert.Details["num_scaling_events"] = fmt.Sprintf("%.0f", *asg.Metrics[MetricNumEvents])
+				alert.Details["num_scaling_events"] = fmt.Sprintf("%.0f", *asg.Metrics[metricNumEvents])
 				alert.Description = description
 				if err := alert.Save(db); err != nil {
 					fmt.Printf("%+v\n", err)

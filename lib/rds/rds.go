@@ -2,15 +2,10 @@ package rds
 
 import (
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 
-	"sync"
-
-	"strings"
-
-	"sort"
-
-	"github.com/ararog/timeago"
 	"github.com/asdine/storm"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -18,6 +13,7 @@ import (
 	"github.com/stojg/aunt/lib/core"
 )
 
+// DBInstance contains app specific information about an RDS
 type DBInstance struct {
 	Name         string
 	ResourceID   string `storm:"id"`
@@ -31,17 +27,19 @@ type DBInstance struct {
 }
 
 const (
-	MetricCredits = "CPUCreditBalance"
-	MetricsCPU    = "CPUUtilization"
+	metricCredits = "CPUCreditBalance"
+	metricsCPU    = "CPUUtilization"
 )
 
+// different threshold depednding on db instance type
 const (
-	MetricsCreditsThreshold float64 = 30
-	MetricsCPUThreshold     float64 = 70.0
+	metricsCreditsThreshold float64 = 15
+	metricsCPUThreshold     float64 = 70.0
 )
 
-var metrics = []string{MetricCredits, MetricsCPU}
+var metrics = []string{metricCredits, metricsCPU}
 
+// Update will update the database with DBInstance data
 func Update(db *storm.DB, roles map[string]string, regions []string) error {
 	var wg sync.WaitGroup
 	wg.Add(len(roles))
@@ -55,46 +53,6 @@ func Update(db *storm.DB, roles map[string]string, regions []string) error {
 	}
 	wg.Wait()
 	return nil
-}
-
-func Purge(db *storm.DB, olderThan time.Duration) error {
-	var resources []DBInstance
-
-	startTime := time.Time{}
-	endTime := time.Now().Add(-1 * olderThan)
-
-	if err := db.Range("LastUpdated", startTime, endTime, &resources); err != nil && err != storm.ErrNotFound {
-		return err
-	}
-
-	for _, i := range resources {
-		fmt.Printf("purging: %s %s\n", i.Name, i.LastUpdated)
-		// @todo, close all alerts related to this instance
-		if err := db.DeleteStruct(&i); err != nil {
-			fmt.Printf("purge: %v %s\n", err, i.Name)
-		}
-	}
-	return nil
-}
-
-func TableData(db *storm.DB) ([]string, [][]string, error) {
-	var headers []string
-	var rows [][]string
-
-	var instances []DBInstance
-	if err := db.All(&instances); err != nil {
-		return headers, rows, err
-	}
-	if len(instances) < 1 {
-		return headers, rows, nil
-	}
-
-	headers = asData(instances[0]).Keys()
-	for _, i := range instances {
-		rows = append(rows, asData(i).Values())
-	}
-	sort.Sort(core.RowSorter(rows))
-	return headers, rows, nil
 }
 
 func updateForRole(db *storm.DB, account, role string, regions []string) {
@@ -132,10 +90,10 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 			}
 
 			//check metrics
-			credits := instance.Metrics[MetricCredits]
-			if credits != nil && *credits < MetricsCreditsThreshold {
-				alert := core.NewAlert(MetricCredits, instance.ResourceID)
-				alert.Message = fmt.Sprintf("CPU credits (%.1f) is below %.1f for %s", *credits, MetricsCreditsThreshold, instance.Name)
+			credits := instance.Metrics[metricCredits]
+			if credits != nil && *credits < metricsCreditsThreshold {
+				alert := core.NewAlert(metricCredits, instance.ResourceID)
+				alert.Message = fmt.Sprintf("CPU credits (%.1f) is below %.1f for %s", *credits, metricsCreditsThreshold, instance.Name)
 				alert.Details["account"] = instance.Account
 				alert.Details["region"] = instance.Region
 				alert.Details["resource_id"] = instance.ResourceID
@@ -143,10 +101,10 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 					fmt.Printf("%+v\n", err)
 				}
 			}
-			cpu := instance.Metrics[MetricsCPU]
-			if cpu != nil && *cpu > MetricsCPUThreshold {
-				alert := core.NewAlert(MetricCredits, instance.ResourceID)
-				alert.Message = fmt.Sprintf("CPU Utilisation (%.1f) is above %.1f for %s", *cpu, MetricsCPUThreshold, instance.Name)
+			cpu := instance.Metrics[metricsCPU]
+			if cpu != nil && *cpu > metricsCPUThreshold {
+				alert := core.NewAlert(metricCredits, instance.ResourceID)
+				alert.Message = fmt.Sprintf("CPU Utilisation (%.1f) is above %.1f for %s", *cpu, metricsCPUThreshold, instance.Name)
 				alert.Details["account"] = instance.Account
 				alert.Details["region"] = instance.Region
 				alert.Details["resource_id"] = instance.ResourceID
@@ -177,24 +135,4 @@ func metric(namespace string, dimensions []*cloudwatch.Dimension, metricName str
 		return nil
 	}
 	return result.Datapoints[0].Average
-}
-
-func asData(i DBInstance) core.KeyValue {
-	launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *i.LaunchTime)
-	var d core.KeyValue
-	d.Add("DBInstance Name", i.Name)
-	for _, name := range metrics {
-		val := i.Metrics[name]
-		if val == nil {
-			d.Add(name, "")
-		} else {
-			d.Add(name, fmt.Sprintf("%.2f", *val))
-		}
-	}
-	d.Add("Type", i.InstanceType)
-	d.Add("ResourceID", i.ResourceID)
-	d.Add("Launched", launchedAgo)
-	d.Add("Region", i.Region)
-	d.Add("Account", i.Account)
-	return d
 }

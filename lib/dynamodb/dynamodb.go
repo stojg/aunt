@@ -2,13 +2,9 @@ package dynamodb
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
-	"sync"
-
-	"sort"
-
-	"github.com/ararog/timeago"
 	"github.com/asdine/storm"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -16,6 +12,7 @@ import (
 	"github.com/stojg/aunt/lib/core"
 )
 
+// Table is a app specific representation of a dynamodb table
 type Table struct {
 	Name          string
 	ResourceID    string `storm:"id"`
@@ -30,17 +27,18 @@ type Table struct {
 }
 
 const (
-	ReadThrottleEvents  = "ReadThrottleEvents"
-	WriteThrottleEvents = "WriteThrottleEvents"
+	readThrottleEvents  = "ReadThrottleEvents"
+	writeThrottleEvents = "WriteThrottleEvents"
 )
 
 const (
-	ReadThrottleEventsThreshold  float64 = 10
-	WriteThrottleEventsThreshold float64 = 10
+	readThrottleEventsThreshold  float64 = 10
+	writeThrottleEventsThreshold float64 = 10
 )
 
-var metrics = []string{ReadThrottleEvents, WriteThrottleEvents}
+var metrics = []string{readThrottleEvents, writeThrottleEvents}
 
+// Update will update the database with Table data
 func Update(db *storm.DB, roles map[string]string, regions []string) error {
 	var wg sync.WaitGroup
 	wg.Add(len(roles))
@@ -54,47 +52,6 @@ func Update(db *storm.DB, roles map[string]string, regions []string) error {
 	}
 	wg.Wait()
 	return nil
-}
-
-func Purge(db *storm.DB, olderThan time.Duration) error {
-	var resources []Table
-
-	startTime := time.Time{}
-	endTime := time.Now().Add(-1 * olderThan)
-
-	if err := db.Range("LastUpdated", startTime, endTime, &resources); err != nil && err != storm.ErrNotFound {
-		return err
-	}
-
-	for _, i := range resources {
-		fmt.Printf("purging: %s %s\n", i.Name, i.LastUpdated)
-		// @todo, close all alerts related to this instance
-		if err := db.DeleteStruct(&i); err != nil {
-			fmt.Printf("purge: %v %s\n", err, i.Name)
-		}
-	}
-	return nil
-}
-
-func TableData(db *storm.DB) ([]string, [][]string, error) {
-	var headers []string
-	var rows [][]string
-
-	var volumes []Table
-	if err := db.All(&volumes); err != nil {
-		return headers, rows, err
-	}
-
-	if len(volumes) < 1 {
-		return headers, rows, nil
-	}
-
-	headers = asData(volumes[0]).Keys()
-	for _, i := range volumes {
-		rows = append(rows, asData(i).Values())
-	}
-	sort.Sort(core.RowSorter(rows))
-	return headers, rows, nil
 }
 
 func updateForRole(db *storm.DB, account, role string, regions []string) {
@@ -139,10 +96,10 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 			}
 
 			// check metrics
-			throttledReads := table.Metrics[ReadThrottleEvents]
-			if throttledReads != nil && *throttledReads > ReadThrottleEventsThreshold {
-				alert := core.NewAlert(ReadThrottleEvents, table.ResourceID)
-				alert.Message = fmt.Sprintf("Throttled reads (%.1f) is above %.1f for %s", *throttledReads, ReadThrottleEventsThreshold, table.ResourceID)
+			throttledReads := table.Metrics[readThrottleEvents]
+			if throttledReads != nil && *throttledReads > readThrottleEventsThreshold {
+				alert := core.NewAlert(readThrottleEvents, table.ResourceID)
+				alert.Message = fmt.Sprintf("Throttled reads (%.1f) is above %.1f for %s", *throttledReads, readThrottleEventsThreshold, table.ResourceID)
 				alert.Details["account"] = table.Account
 				alert.Details["region"] = table.Region
 				alert.Details["resource_id"] = table.ResourceID
@@ -150,10 +107,10 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 					fmt.Printf("%+v\n", err)
 				}
 			}
-			throttledWrites := table.Metrics[WriteThrottleEvents]
-			if throttledWrites != nil && *throttledWrites > WriteThrottleEventsThreshold {
-				alert := core.NewAlert(WriteThrottleEvents, table.ResourceID)
-				alert.Message = fmt.Sprintf("Throttled writes (%.1f) is above %.1f for %s", *throttledWrites, WriteThrottleEventsThreshold, table.ResourceID)
+			throttledWrites := table.Metrics[writeThrottleEvents]
+			if throttledWrites != nil && *throttledWrites > writeThrottleEventsThreshold {
+				alert := core.NewAlert(writeThrottleEvents, table.ResourceID)
+				alert.Message = fmt.Sprintf("Throttled writes (%.1f) is above %.1f for %s", *throttledWrites, writeThrottleEventsThreshold, table.ResourceID)
 				alert.Details["account"] = table.Account
 				alert.Details["region"] = table.Region
 				alert.Details["resource_id"] = table.ResourceID
@@ -184,24 +141,4 @@ func metric(namespace string, dimensions []*cloudwatch.Dimension, metricName str
 		return nil
 	}
 	return result.Datapoints[0].Average
-}
-
-func asData(i Table) core.KeyValue {
-	launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *i.LaunchTime)
-	var d core.KeyValue
-	d.Add("Table Name", i.Name)
-	for _, name := range metrics {
-		val := i.Metrics[name]
-		if val == nil {
-			d.Add(name, "")
-		} else {
-			d.Add(name, fmt.Sprintf("%.2f", *val))
-		}
-	}
-	d.Add("Provisioned Read", fmt.Sprintf("%d", i.ReadCapacity))
-	d.Add("Provisioned Write", fmt.Sprintf("%d", i.WriteCapacity))
-	d.Add("Launched", launchedAgo)
-	d.Add("Region", i.Region)
-	d.Add("Account", i.Account)
-	return d
 }

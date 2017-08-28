@@ -11,6 +11,7 @@ import (
 
 var alertCli *client.OpsGenieAlertV2Client
 
+// SetOpsGenieToken sets the api key and initialises an OpsGenie alert client
 func SetOpsGenieToken(apiKey string) error {
 	cli := &client.OpsGenieClient{}
 	cli.SetAPIKey(apiKey)
@@ -19,6 +20,7 @@ func SetOpsGenieToken(apiKey string) error {
 	return err
 }
 
+// NewAlert returns a new Alert
 func NewAlert(name, resourceID string) *Alert {
 	return &Alert{
 		ID:          fmt.Sprintf("aunt.%s.%s", name, resourceID),
@@ -28,6 +30,7 @@ func NewAlert(name, resourceID string) *Alert {
 	}
 }
 
+// Purge will remove and close alerts that no longer is alerted
 func Purge(db *storm.DB, olderThan time.Duration) error {
 	var resources []*Alert
 
@@ -46,6 +49,7 @@ func Purge(db *storm.DB, olderThan time.Duration) error {
 	return nil
 }
 
+// Alert is an app specific representation of a OPSGenie alert
 type Alert struct {
 	// ID, The unique identifier for this alert
 	ID string
@@ -63,10 +67,12 @@ type Alert struct {
 	LastUpdated time.Time
 }
 
+// Returns a string representation of this alert
 func (a *Alert) String() string {
 	return fmt.Sprintf("%s (%s), %s", a.Message, a.Entity, a.Details)
 }
 
+// Save this Alert to the database and sends an alert to OpsGenie
 func (a *Alert) Save(db *storm.DB) error {
 	fmt.Printf("Creating: %s\n", a)
 	if err := db.Save(a); err != nil {
@@ -92,6 +98,7 @@ func (a *Alert) Save(db *storm.DB) error {
 	return err
 }
 
+// Delete this Alert and close the OpsGenie alert
 func (a *Alert) Delete(db *storm.DB) error {
 	fmt.Printf("Closing: %s\n", a)
 	if err := db.DeleteStruct(a); err != nil {

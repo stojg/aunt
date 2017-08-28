@@ -5,18 +5,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"sort"
 	"time"
 
+	"github.com/asdine/storm"
+	"github.com/stojg/aunt/lib/asg"
 	"github.com/stojg/aunt/lib/core"
 	"github.com/stojg/aunt/lib/dynamodb"
 	"github.com/stojg/aunt/lib/ebs"
 	"github.com/stojg/aunt/lib/ec2"
 	"github.com/stojg/aunt/lib/rds"
-
-	"github.com/asdine/storm"
-	"github.com/olekukonko/tablewriter"
-	"github.com/stojg/aunt/lib/asg"
 	"github.com/urfave/cli"
 )
 
@@ -44,8 +41,8 @@ func main() {
 
 	app := cli.NewApp()
 	app.Version = Version
-	cParsed, err := time.Parse(time.RFC1123, Compiled)
-	if err != nil {
+	cParsed, dateParseErr := time.Parse(time.RFC1123, Compiled)
+	if dateParseErr != nil {
 		cParsed = time.Time{}
 	}
 	app.Compiled = cParsed
@@ -74,110 +71,23 @@ SUPPORT:  http://github.com/stojg/aunt
 
 	db, err := storm.Open("aunt.db")
 	if err != nil {
-		// lazy, fix
-		panic(err)
+		fmt.Printf("Could not open database file: %v\n", err)
+		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			fmt.Printf("error during closing of database file: %v\n", err)
+		}
+	}()
 
 	app.Commands = []cli.Command{
 		{
 			Name:  "update",
 			Usage: "update a metrics",
 			Action: func(c *cli.Context) error {
-				if err := asg.Update(db, roles, regions); err != nil {
-					return fmt.Errorf("error during update: %v", err)
-				}
-				if err := ec2.Update(db, roles, regions); err != nil {
-					return fmt.Errorf("error during update: %v", err)
-				}
-				if err := rds.Update(db, roles, regions); err != nil {
-					return fmt.Errorf("error during update: %v", err)
-				}
-				if err := ebs.Update(db, roles, regions); err != nil {
-					return fmt.Errorf("error during update: %v", err)
-				}
-				if err := dynamodb.Update(db, roles, regions); err != nil {
-					return fmt.Errorf("error during update: %v", err)
-				}
-				if err := core.Purge(db, 15*time.Minute); err != nil {
-					return fmt.Errorf("error during alert purge: %v", err)
-				}
-				return nil
+				return update(db)
 			},
 		},
-		{
-			Name:  "ec2",
-			Usage: "EC2 metrics",
-			Action: func(c *cli.Context) error {
-				if err := ec2.Update(db, roles, regions); err != nil {
-					return fmt.Errorf("error during update: %v", err)
-				}
-				if err := ec2.Purge(db, 15*time.Minute); err != nil {
-					return fmt.Errorf("error during purge: %v", err)
-				}
-				header, rows, err := ec2.TableData(db)
-				if err != nil {
-					return err
-				}
-				displayTable(header, rows)
-				return nil
-			},
-		},
-		{
-			Name:  "rds",
-			Usage: "RDS metrics",
-			Action: func(c *cli.Context) error {
-				if err := rds.Update(db, roles, regions); err != nil {
-					return fmt.Errorf("error during update: %v", err)
-				}
-				if err := rds.Purge(db, 15*time.Minute); err != nil {
-					return fmt.Errorf("error during purge: %v", err)
-				}
-				header, rows, err := rds.TableData(db)
-				if err != nil {
-					return err
-				}
-				displayTable(header, rows)
-				return nil
-			},
-		},
-		{
-			Name:  "ebs",
-			Usage: "show EBS statistics",
-			Action: func(c *cli.Context) error {
-				if err := ebs.Update(db, roles, regions); err != nil {
-					return fmt.Errorf("error during update: %v", err)
-				}
-				if err := ebs.Purge(db, 15*time.Minute); err != nil {
-					return fmt.Errorf("error during purge: %v", err)
-				}
-				header, rows, err := ebs.TableData(db)
-				if err != nil {
-					return err
-				}
-				displayTable(header, rows)
-				return nil
-			},
-		},
-		{
-			Name:  "dynamodb",
-			Usage: "show DynamoDB statistics",
-			Action: func(c *cli.Context) error {
-				if err := dynamodb.Update(db, roles, regions); err != nil {
-					return fmt.Errorf("error during update: %v", err)
-				}
-				if err := dynamodb.Purge(db, 15*time.Minute); err != nil {
-					return fmt.Errorf("error during purge: %v", err)
-				}
-				header, rows, err := dynamodb.TableData(db)
-				if err != nil {
-					return err
-				}
-				displayTable(header, rows)
-				return nil
-			},
-		},
-
 		{
 			Name:  "serve",
 			Usage: "run as a HTTP server",
@@ -185,29 +95,7 @@ SUPPORT:  http://github.com/stojg/aunt
 				cli.IntFlag{Name: "port", Value: 8080},
 			},
 			Action: func(c *cli.Context) error {
-				resourceTicker := time.NewTicker(10 * time.Minute)
-				for {
-					if err := asg.Update(db, roles, regions); err != nil {
-						return fmt.Errorf("error during update: %v", err)
-					}
-					if err := ec2.Update(db, roles, regions); err != nil {
-						fmt.Printf("error during update: %v", err)
-					}
-					if err := rds.Update(db, roles, regions); err != nil {
-						fmt.Printf("error during update: %v", err)
-					}
-					if err := ebs.Update(db, roles, regions); err != nil {
-						fmt.Printf("error during update: %v", err)
-					}
-					if err := dynamodb.Update(db, roles, regions); err != nil {
-						fmt.Printf("error during update: %v", err)
-					}
-					if err := core.Purge(db, 15*time.Minute); err != nil {
-						fmt.Printf("error during alert purge: %v", err)
-					}
-					<-resourceTicker.C
-				}
-				return nil
+				return serve(db)
 			},
 		},
 	}
@@ -217,12 +105,36 @@ SUPPORT:  http://github.com/stojg/aunt
 	}
 }
 
-func displayTable(headers []string, rows [][]string) {
-	output := tablewriter.NewWriter(os.Stdout)
-	output.SetHeader(headers)
-	sort.Sort(core.RowSorter(rows))
-	output.AppendBulk(rows)
-	output.Render()
+func update(db *storm.DB) error {
+	if err := asg.Update(db, roles, regions); err != nil {
+		return fmt.Errorf("error during update: %v", err)
+	}
+	if err := ec2.Update(db, roles, regions); err != nil {
+		return fmt.Errorf("error during update: %v", err)
+	}
+	if err := rds.Update(db, roles, regions); err != nil {
+		return fmt.Errorf("error during update: %v", err)
+	}
+	if err := ebs.Update(db, roles, regions); err != nil {
+		return fmt.Errorf("error during update: %v", err)
+	}
+	if err := dynamodb.Update(db, roles, regions); err != nil {
+		return fmt.Errorf("error during update: %v", err)
+	}
+	if err := core.Purge(db, 15*time.Minute); err != nil {
+		return fmt.Errorf("error during alert purge: %v", err)
+	}
+	return nil
+}
+
+func serve(db *storm.DB) error {
+	resourceTicker := time.NewTicker(10 * time.Minute)
+	for {
+		if err := update(db); err != nil {
+			return fmt.Errorf("error during update: %v", err)
+		}
+		<-resourceTicker.C
+	}
 }
 
 // LoadConfig loads and json configuration file into Config struct

@@ -2,13 +2,9 @@ package ebs
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
-	"sync"
-
-	"sort"
-
-	"github.com/ararog/timeago"
 	"github.com/asdine/storm"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -17,6 +13,7 @@ import (
 	auntec2 "github.com/stojg/aunt/lib/ec2"
 )
 
+// Volume is an app specific representation of a EBS volume
 type Volume struct {
 	Name        string
 	ResourceID  string `storm:"id"`
@@ -33,15 +30,16 @@ type Volume struct {
 }
 
 const (
-	MetricBurstBalance = "BurstBalance"
+	metricBurstBalance = "BurstBalance"
 )
 
 const (
-	MetricBurstBalanceThreshold float64 = 20
+	metricBurstBalanceThreshold float64 = 20
 )
 
-var metrics = []string{MetricBurstBalance}
+var metrics = []string{metricBurstBalance}
 
+// Update will update the database with Volume data
 func Update(db *storm.DB, roles map[string]string, regions []string) error {
 	var wg sync.WaitGroup
 	wg.Add(len(roles))
@@ -55,47 +53,6 @@ func Update(db *storm.DB, roles map[string]string, regions []string) error {
 	}
 	wg.Wait()
 	return nil
-}
-
-func Purge(db *storm.DB, olderThan time.Duration) error {
-	var resources []Volume
-
-	startTime := time.Time{}
-	endTime := time.Now().Add(-1 * olderThan)
-
-	if err := db.Range("LastUpdated", startTime, endTime, &resources); err != nil && err != storm.ErrNotFound {
-		return err
-	}
-
-	for _, i := range resources {
-		fmt.Printf("purging: %s %s\n", i.Name, i.LastUpdated)
-		// @todo, close all alerts related to this instance
-		if err := db.DeleteStruct(&i); err != nil {
-			fmt.Printf("purge: %v %s\n", err, i.Name)
-		}
-	}
-	return nil
-}
-
-func TableData(db *storm.DB) ([]string, [][]string, error) {
-	var headers []string
-	var rows [][]string
-
-	var volumes []Volume
-	if err := db.All(&volumes); err != nil {
-		return headers, rows, err
-	}
-
-	if len(volumes) < 1 {
-		return headers, rows, nil
-	}
-
-	headers = asData(volumes[0]).Keys()
-	for _, i := range volumes {
-		rows = append(rows, asData(i).Values())
-	}
-	sort.Sort(core.RowSorter(rows))
-	return headers, rows, nil
 }
 
 func updateForRole(db *storm.DB, account, role string, regions []string) {
@@ -156,10 +113,10 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 			}
 
 			// check metrics
-			balance := volume.Metrics[MetricBurstBalance]
-			if balance != nil && *balance < MetricBurstBalanceThreshold {
-				alert := core.NewAlert(MetricBurstBalance, volume.ResourceID)
-				alert.Message = fmt.Sprintf("Burst balance (%.1f%%) is below %.1f%% for volume %s", *balance, MetricBurstBalanceThreshold, volume.Name)
+			balance := volume.Metrics[metricBurstBalance]
+			if balance != nil && *balance < metricBurstBalanceThreshold {
+				alert := core.NewAlert(metricBurstBalance, volume.ResourceID)
+				alert.Message = fmt.Sprintf("Burst balance (%.1f%%) is below %.1f%% for volume %s", *balance, metricBurstBalanceThreshold, volume.Name)
 				alert.Details["account"] = volume.Account
 				alert.Details["region"] = volume.Region
 				alert.Details["resource_id"] = volume.ResourceID
@@ -193,29 +150,4 @@ func metric(namespace string, dimensions []*cloudwatch.Dimension, metricName str
 		return nil
 	}
 	return result.Datapoints[0].Average
-}
-
-func asData(i Volume) core.KeyValue {
-	launchedAgo, _ := timeago.TimeAgoWithTime(time.Now(), *i.LaunchTime)
-	var d core.KeyValue
-	d.Add("Volume Name", i.Name)
-	for _, name := range metrics {
-		val := i.Metrics[name]
-		if val == nil {
-			d.Add(name, "")
-		} else {
-			d.Add(name, fmt.Sprintf("%.2f", *val))
-		}
-	}
-	if i.IOPS == nil {
-		d.Add("IOPS", "N/A")
-	} else {
-		d.Add("IOPS", fmt.Sprintf("%d", *i.IOPS))
-	}
-	d.Add("ResourceID", i.ResourceID)
-	d.Add("Attached to", i.InstanceID)
-	d.Add("Launched", launchedAgo)
-	d.Add("Region", i.Region)
-	d.Add("Account", i.Account)
-	return d
 }

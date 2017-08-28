@@ -20,7 +20,7 @@ fix:
 install: check
 	go install ${LDFLAGS} .
 
-release: check
+release:
 	GOOS=linux GOARCH=amd64 go build -o ${BINARY}_linux ${LDFLAGS} .
 	#GOOS=windows GOARCH=amd64 go build -o ${BINARY}_windows ${LDFLAGS} .
 	#GOOS=darwin GOARCH=amd64 go build -o ${BINARY}_darwin ${LDFLAGS} .
