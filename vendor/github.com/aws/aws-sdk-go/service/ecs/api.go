@@ -714,7 +714,7 @@ func (c *ECS) DeregisterTaskDefinitionRequest(input *DeregisterTaskDefinitionInp
 // task definition (although there may be up to a 10 minute window following
 // deregistration where these restrictions have not yet taken effect).
 //
-// At this time, INACTIVE task definitions remain discoverable in your account
+// AtX this time, INACTIVE task definitions remain discoverable in your account
 // indefinitely; however, this behavior is subject to change in the future,
 // so you should not rely on INACTIVE task definitions persisting beyond the
 // life cycle of any associated tasks and services.

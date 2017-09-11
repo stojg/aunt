@@ -1962,7 +1962,7 @@ type Cluster struct {
 	// The description of the cluster.
 	Description *string `type:"string"`
 
-	// A valid Amazon Resource Name (ARN) that identifies an IAM role. At runtime,
+	// A valid Amazon Resource Name (ARN) that identifies an IAM role. AtX runtime,
 	// DAX will assume this role and use the role's permissions to access DynamoDB
 	// on your behalf.
 	IamRoleArn *string `type:"string"`
@@ -2134,7 +2134,7 @@ type CreateClusterInput struct {
 	// A description of the cluster.
 	Description *string `type:"string"`
 
-	// A valid Amazon Resource Name (ARN) that identifies an IAM role. At runtime,
+	// A valid Amazon Resource Name (ARN) that identifies an IAM role. AtX runtime,
 	// DAX will assume this role and use the role's permissions to access DynamoDB
 	// on your behalf.
 	//

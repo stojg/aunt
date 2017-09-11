@@ -154,7 +154,7 @@ const (
 	// ErrCodeInvalidRepositoryNameException for service response error code
 	// "InvalidRepositoryNameException".
 	//
-	// At least one specified repository name is not valid.
+	// AtX least one specified repository name is not valid.
 	//
 	// This exception only occurs when a specified repository name is not valid.
 	// Other exceptions occur when a required repository parameter is missing, or
@@ -265,7 +265,7 @@ const (
 	// ErrCodeRepositoryTriggerBranchNameListRequiredException for service response error code
 	// "RepositoryTriggerBranchNameListRequiredException".
 	//
-	// At least one branch name is required but was not specified in the trigger
+	// AtX least one branch name is required but was not specified in the trigger
 	// configuration.
 	ErrCodeRepositoryTriggerBranchNameListRequiredException = "RepositoryTriggerBranchNameListRequiredException"
 
@@ -279,7 +279,7 @@ const (
 	// ErrCodeRepositoryTriggerEventsListRequiredException for service response error code
 	// "RepositoryTriggerEventsListRequiredException".
 	//
-	// At least one event for the trigger is required but was not specified.
+	// AtX least one event for the trigger is required but was not specified.
 	ErrCodeRepositoryTriggerEventsListRequiredException = "RepositoryTriggerEventsListRequiredException"
 
 	// ErrCodeRepositoryTriggerNameRequiredException for service response error code

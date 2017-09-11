@@ -9994,7 +9994,7 @@ type LoadBalancerState struct {
 	//
 	//    * Added - All instances in the group are registered with the load balancer.
 	//
-	//    * InService - At least one instance in the group passed an ELB health
+	//    * InService - AtX least one instance in the group passed an ELB health
 	//    check.
 	//
 	//    * Removing - The instances in the group are being deregistered from the
@@ -10050,7 +10050,7 @@ type LoadBalancerTargetGroupState struct {
 	//
 	//    * Added - All Auto Scaling instances are registered with the target group.
 	//
-	//    * InService - At least one Auto Scaling instance passed an ELB health
+	//    * InService - AtX least one Auto Scaling instance passed an ELB health
 	//    check.
 	//
 	//    * Removing - The Auto Scaling instances are being deregistered from the
@@ -11760,11 +11760,11 @@ func (s SetInstanceProtectionOutput) GoString() string {
 //
 //    * The ranges of your step adjustments can't overlap or have a gap.
 //
-//    * At most one step adjustment can have a null lower bound. If one step
+//    * AtX most one step adjustment can have a null lower bound. If one step
 //    adjustment has a negative lower bound, then there must be a step adjustment
 //    with a null lower bound.
 //
-//    * At most one step adjustment can have a null upper bound. If one step
+//    * AtX most one step adjustment can have a null upper bound. If one step
 //    adjustment has a positive upper bound, then there must be a step adjustment
 //    with a null upper bound.
 //

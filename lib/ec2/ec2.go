@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/stojg/aunt/lib/core"
+	"github.com/stojg/aunt/lib/stats"
 )
 
 // Instance is an app specific representation of a EC2 instance
@@ -67,68 +68,82 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 				},
 			},
 		})
+
 		if err != nil {
 			fmt.Printf("ec2.describeInstances %s %s %v\n", role, region, err)
 			return
 		}
 
 		for idx := range resp.Reservations {
-			for _, i := range resp.Reservations[idx].Instances {
+			for _, inst := range resp.Reservations[idx].Instances {
 				instance := &Instance{
-					Name:         core.TagValue("Name", i.Tags),
-					ResourceID:   *i.InstanceId,
+					Name:         core.TagValue("Name", inst.Tags),
+					ResourceID:   *inst.InstanceId,
 					Region:       *config.Region,
 					Account:      account,
-					InstanceType: *i.InstanceType,
-					LaunchTime:   i.LaunchTime,
-					State:        *i.State.Name,
+					InstanceType: *inst.InstanceType,
+					LaunchTime:   inst.LaunchTime,
+					State:        *inst.State.Name,
 					LastUpdated:  time.Now(),
 					Metrics:      make(map[string]*float64),
 				}
-				dimensions := []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: i.InstanceId}}
+				dimensions := []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: inst.InstanceId}}
 
-				for _, name := range metrics {
-					instance.Metrics[name] = metric("AWS/EC2", dimensions, name, cw)
+				ms := metric("AWS/EC2", dimensions, metricCredits, cw)
+				if len(ms) < 3 {
+					continue
 				}
-				if err := db.Save(instance); err != nil {
-					fmt.Printf("%+v\n", err)
+
+				linear := stats.NewLinear(stats.Convert(ms))
+				zeroAt := linear.AtY(0)
+				now := time.Now()
+				if !zeroAt.Before(now) && zeroAt.Before(now.Add(12*time.Hour)) || linear.LastY() < 5 {
+					duration := zeroAt.Sub(now)
+					fmt.Printf("%0.1fhrs %s | %0.1fcr/hr | current: %0.2f\n", duration.Hours(), instance.Name, linear.Slope()*3600, linear.LastY())
 				}
-				// check metrics
-				credits := instance.Metrics[metricCredits]
-				if credits != nil && *credits < metricsCreditsThreshold {
-					alert := core.NewAlert(metricCredits, instance.ResourceID)
-					alert.Message = fmt.Sprintf("CPU credits (%.1f) is below %.1f for %s", *credits, metricsCreditsThreshold, instance.Name)
-					alert.Details["account"] = instance.Account
-					alert.Details["region"] = instance.Region
-					alert.Details["resource_id"] = instance.ResourceID
-					if err := alert.Save(db); err != nil {
-						fmt.Printf("%+v\n", err)
-					}
-				}
-				cpu := instance.Metrics[metricsCPU]
-				if cpu != nil && *cpu > metricsCPUThreshold {
-					alert := core.NewAlert(metricCredits, instance.ResourceID)
-					alert.Message = fmt.Sprintf("CPU Utilisation (%.1f) is above %.1f for %s", *cpu, metricsCPUThreshold, instance.Name)
-					alert.Details["account"] = instance.Account
-					alert.Details["region"] = instance.Region
-					alert.Details["resource_id"] = instance.ResourceID
-					if err := alert.Save(db); err != nil {
-						fmt.Printf("%+v\n", err)
-					}
-				}
+
+				//for _, name := range metrics {
+				//	instance.Metrics[name] = metric("AWS/EC2", dimensions, name, cw)
+				//}
+				//if err := db.Save(instance); err != nil {
+				//	fmt.Printf("%+v\n", err)
+				//}
+				//// check metrics
+				//credits := instance.Metrics[metricCredits]
+				//if credits != nil && *credits < metricsCreditsThreshold {
+				//	alert := core.NewAlert(metricCredits, instance.ResourceID)
+				//	alert.Message = fmt.Sprintf("CPU credits (%.1f) is below %.1f for %s", *credits, metricsCreditsThreshold, instance.Name)
+				//	alert.Details["account"] = instance.Account
+				//	alert.Details["region"] = instance.Region
+				//	alert.Details["resource_id"] = instance.ResourceID
+				//	if err := alert.Save(db); err != nil {
+				//		fmt.Printf("%+v\n", err)
+				//	}
+				//}
+				//cpu := instance.Metrics[metricsCPU]
+				//if cpu != nil && *cpu > metricsCPUThreshold {
+				//	alert := core.NewAlert(metricCredits, instance.ResourceID)
+				//	alert.Message = fmt.Sprintf("CPU Utilisation (%.1f) is above %.1f for %s", *cpu, metricsCPUThreshold, instance.Name)
+				//	alert.Details["account"] = instance.Account
+				//	alert.Details["region"] = instance.Region
+				//	alert.Details["resource_id"] = instance.ResourceID
+				//	if err := alert.Save(db); err != nil {
+				//		fmt.Printf("%+v\n", err)
+				//	}
+				//}
 			}
 		}
 	}
 }
 
-func metric(namespace string, dimensions []*cloudwatch.Dimension, metricName string, cw *cloudwatch.CloudWatch) *float64 {
+func metric(namespace string, dimensions []*cloudwatch.Dimension, metricName string, cw *cloudwatch.CloudWatch) []*cloudwatch.Datapoint {
 	input := &cloudwatch.GetMetricStatisticsInput{
 		Namespace:  aws.String(namespace),
 		MetricName: aws.String(metricName),
 		Dimensions: dimensions,
-		StartTime:  aws.Time(time.Now().Add(-15 * time.Minute)),
+		StartTime:  aws.Time(time.Now().Add(-6 * time.Hour)),
 		EndTime:    aws.Time(time.Now()),
-		Period:     aws.Int64(3600),
+		Period:     aws.Int64(300),
 		Statistics: []*string{aws.String("Average")},
 	}
 	result, err := cw.GetMetricStatistics(input)
@@ -136,8 +151,9 @@ func metric(namespace string, dimensions []*cloudwatch.Dimension, metricName str
 		fmt.Printf("ec2.getMetric %v\n", err)
 		return nil
 	}
-	if len(result.Datapoints) == 0 {
-		return nil
-	}
-	return result.Datapoints[0].Average
+	return result.Datapoints
+	//if len(result.Datapoints) == 0 {
+	//	return nil
+	//}
+	//return result.Datapoints[0].Average
 }

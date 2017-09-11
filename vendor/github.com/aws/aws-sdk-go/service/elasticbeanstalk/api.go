@@ -10573,7 +10573,7 @@ type UpdateEnvironmentInput struct {
 
 	// This specifies the tier to use to update the environment.
 	//
-	// Condition: At this time, if you change the tier version, name, or type, AWS
+	// Condition: AtX this time, if you change the tier version, name, or type, AWS
 	// Elastic Beanstalk returns InvalidParameterValue error.
 	Tier *EnvironmentTier `type:"structure"`
 

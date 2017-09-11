@@ -666,7 +666,7 @@ func (c *Glue) CreateCrawlerRequest(input *CreateCrawlerInput) (req *request.Req
 // CreateCrawler API operation for AWS Glue.
 //
 // Creates a new Crawler with specified targets, role, configuration, and optional
-// schedule. At least one crawl target must be specified, in either the s3Targets
+// schedule. AtX least one crawl target must be specified, in either the s3Targets
 // or the jdbcTargets field.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions

@@ -8,10 +8,7 @@ import (
 	"time"
 
 	"github.com/asdine/storm"
-	"github.com/stojg/aunt/lib/asg"
 	"github.com/stojg/aunt/lib/core"
-	"github.com/stojg/aunt/lib/dynamodb"
-	"github.com/stojg/aunt/lib/ebs"
 	"github.com/stojg/aunt/lib/ec2"
 	"github.com/stojg/aunt/lib/rds"
 	"github.com/urfave/cli"
@@ -106,24 +103,24 @@ SUPPORT:  http://github.com/stojg/aunt
 }
 
 func update(db *storm.DB) error {
-	if err := asg.Update(db, roles, regions); err != nil {
-		return fmt.Errorf("error during update: %v", err)
-	}
+	//if err := asg.Update(db, roles, regions); err != nil {
+	//	return fmt.Errorf("error during update: %v", err)
+	//}
 	if err := ec2.Update(db, roles, regions); err != nil {
 		return fmt.Errorf("error during update: %v", err)
 	}
 	if err := rds.Update(db, roles, regions); err != nil {
 		return fmt.Errorf("error during update: %v", err)
 	}
-	if err := ebs.Update(db, roles, regions); err != nil {
-		return fmt.Errorf("error during update: %v", err)
-	}
-	if err := dynamodb.Update(db, roles, regions); err != nil {
-		return fmt.Errorf("error during update: %v", err)
-	}
-	if err := core.Purge(db, 15*time.Minute); err != nil {
-		return fmt.Errorf("error during alert purge: %v", err)
-	}
+	//if err := ebs.Update(db, roles, regions); err != nil {
+	//	return fmt.Errorf("error during update: %v", err)
+	//}
+	//if err := dynamodb.Update(db, roles, regions); err != nil {
+	//	return fmt.Errorf("error during update: %v", err)
+	//}
+	//if err := core.Purge(db, 15*time.Minute); err != nil {
+	//	return fmt.Errorf("error during alert purge: %v", err)
+	//}
 	return nil
 }
 

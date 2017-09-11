@@ -169,7 +169,7 @@ func (c *SQS) ChangeMessageVisibilityRequest(input *ChangeMessageVisibilityInput
 //
 // For example, you have a message and with the default visibility timeout of
 // 5 minutes. After 3 minutes, you call ChangeMessageVisiblity with a timeout
-// of 10 minutes. At that time, the timeout for the message is extended by 10
+// of 10 minutes. AtX that time, the timeout for the message is extended by 10
 // minutes beyond the time of the ChangeMessageVisibility action. This results
 // in a total visibility timeout of 13 minutes. You can continue to call the
 // ChangeMessageVisibility to extend the visibility timeout to a maximum of

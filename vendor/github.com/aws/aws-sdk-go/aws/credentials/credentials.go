@@ -5,7 +5,7 @@
 // values is handled by a object which satisfies the Provider interface.
 //
 // By default the Credentials.Get() will cache the successful result of a
-// Provider's Retrieve() until Provider.IsExpired() returns true. At which
+// Provider's Retrieve() until Provider.IsExpired() returns true. AtX which
 // point Credentials will call Provider's Retrieve() to get new credential Value.
 //
 // The Provider is responsible for determining when credentials Value have expired.

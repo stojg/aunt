@@ -5297,7 +5297,7 @@ type InstanceFleet struct {
 	// fleet.
 	//
 	// If not specified or set to 0, only Spot instances are provisioned for the
-	// instance fleet using TargetSpotCapacity. At least one of TargetSpotCapacity
+	// instance fleet using TargetSpotCapacity. AtX least one of TargetSpotCapacity
 	// and TargetOnDemandCapacity should be greater than 0. For a master instance
 	// fleet, only one of TargetSpotCapacity and TargetOnDemandCapacity can be specified,
 	// and its value must be 1.
@@ -5317,7 +5317,7 @@ type InstanceFleet struct {
 	// fleet.
 	//
 	// If not specified or set to 0, only On-Demand instances are provisioned for
-	// the instance fleet. At least one of TargetSpotCapacity and TargetOnDemandCapacity
+	// the instance fleet. AtX least one of TargetSpotCapacity and TargetOnDemandCapacity
 	// should be greater than 0. For a master instance fleet, only one of TargetSpotCapacity
 	// and TargetOnDemandCapacity can be specified, and its value must be 1.
 	TargetSpotCapacity *int64 `type:"integer"`
@@ -5429,7 +5429,7 @@ type InstanceFleetConfig struct {
 	// and the target capacity is exceeded by 3 units.
 	//
 	// If not specified or set to 0, only Spot instances are provisioned for the
-	// instance fleet using TargetSpotCapacity. At least one of TargetSpotCapacity
+	// instance fleet using TargetSpotCapacity. AtX least one of TargetSpotCapacity
 	// and TargetOnDemandCapacity should be greater than 0. For a master instance
 	// fleet, only one of TargetSpotCapacity and TargetOnDemandCapacity can be specified,
 	// and its value must be 1.
@@ -5447,7 +5447,7 @@ type InstanceFleetConfig struct {
 	// and the target capacity is exceeded by 3 units.
 	//
 	// If not specified or set to 0, only On-Demand instances are provisioned for
-	// the instance fleet. At least one of TargetSpotCapacity and TargetOnDemandCapacity
+	// the instance fleet. AtX least one of TargetSpotCapacity and TargetOnDemandCapacity
 	// should be greater than 0. For a master instance fleet, only one of TargetSpotCapacity
 	// and TargetOnDemandCapacity can be specified, and its value must be 1.
 	TargetSpotCapacity *int64 `type:"integer"`
@@ -9547,7 +9547,7 @@ type SpotProvisioningSpecification struct {
 	// When specified, the Spot instance does not terminate before the defined duration
 	// expires, and defined duration pricing for Spot instances applies. Valid values
 	// are 60, 120, 180, 240, 300, or 360. The duration period starts as soon as
-	// a Spot instance receives its instance ID. At the end of the duration, Amazon
+	// a Spot instance receives its instance ID. AtX the end of the duration, Amazon
 	// EC2 marks the Spot instance for termination and provides a Spot instance
 	// termination notice, which gives the instance a two-minute warning before
 	// it terminates.

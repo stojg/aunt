@@ -67,7 +67,7 @@ func (c *Health) DescribeAffectedEntitiesRequest(input *DescribeAffectedEntities
 // affected entities, or where the extent of impact is unknown, include at least
 // one entity indicating this.
 //
-// At least one event ARN is required. Results are sorted by the lastUpdatedTime
+// AtX least one event ARN is required. Results are sorted by the lastUpdatedTime
 // of the entity, starting with the most recent.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -864,7 +864,7 @@ func (s *DateTimeRange) SetTo(v time.Time) *DateTimeRange {
 type DescribeAffectedEntitiesInput struct {
 	_ struct{} `type:"structure"`
 
-	// Values to narrow the results returned. At least one event ARN is required.
+	// Values to narrow the results returned. AtX least one event ARN is required.
 	//
 	// Filter is a required field
 	Filter *EntityFilter `locationName:"filter" type:"structure" required:"true"`

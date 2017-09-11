@@ -441,7 +441,7 @@ func (c *CodeDeploy) BatchGetDeploymentInstancesRequest(input *BatchGetDeploymen
 //
 // Returned Error Codes:
 //   * ErrCodeDeploymentIdRequiredException "DeploymentIdRequiredException"
-//   At least one deployment ID must be specified.
+//   AtX least one deployment ID must be specified.
 //
 //   * ErrCodeDeploymentDoesNotExistException "DeploymentDoesNotExistException"
 //   The deployment does not exist with the applicable IAM user or AWS account.
@@ -450,7 +450,7 @@ func (c *CodeDeploy) BatchGetDeploymentInstancesRequest(input *BatchGetDeploymen
 //   The instance ID was not specified.
 //
 //   * ErrCodeInvalidDeploymentIdException "InvalidDeploymentIdException"
-//   At least one of the deployment IDs was specified in an invalid format.
+//   AtX least one of the deployment IDs was specified in an invalid format.
 //
 //   * ErrCodeInvalidInstanceNameException "InvalidInstanceNameException"
 //   The specified on-premises instance name was specified in an invalid format.
@@ -535,10 +535,10 @@ func (c *CodeDeploy) BatchGetDeploymentsRequest(input *BatchGetDeploymentsInput)
 //
 // Returned Error Codes:
 //   * ErrCodeDeploymentIdRequiredException "DeploymentIdRequiredException"
-//   At least one deployment ID must be specified.
+//   AtX least one deployment ID must be specified.
 //
 //   * ErrCodeInvalidDeploymentIdException "InvalidDeploymentIdException"
-//   At least one of the deployment IDs was specified in an invalid format.
+//   AtX least one of the deployment IDs was specified in an invalid format.
 //
 //   * ErrCodeBatchLimitExceededException "BatchLimitExceededException"
 //   The maximum number of names or IDs allowed for this request (100) was exceeded.
@@ -712,7 +712,7 @@ func (c *CodeDeploy) ContinueDeploymentRequest(input *ContinueDeploymentInput) (
 //
 // Returned Error Codes:
 //   * ErrCodeDeploymentIdRequiredException "DeploymentIdRequiredException"
-//   At least one deployment ID must be specified.
+//   AtX least one deployment ID must be specified.
 //
 //   * ErrCodeDeploymentDoesNotExistException "DeploymentDoesNotExistException"
 //   The deployment does not exist with the applicable IAM user or AWS account.
@@ -721,7 +721,7 @@ func (c *CodeDeploy) ContinueDeploymentRequest(input *ContinueDeploymentInput) (
 //   The deployment is already complete.
 //
 //   * ErrCodeInvalidDeploymentIdException "InvalidDeploymentIdException"
-//   At least one of the deployment IDs was specified in an invalid format.
+//   AtX least one of the deployment IDs was specified in an invalid format.
 //
 //   * ErrCodeDeploymentIsNotInReadyStateException "DeploymentIsNotInReadyStateException"
 //   The deployment does not have a status of Ready and can't continue yet.
@@ -1840,10 +1840,10 @@ func (c *CodeDeploy) GetDeploymentRequest(input *GetDeploymentInput) (req *reque
 //
 // Returned Error Codes:
 //   * ErrCodeDeploymentIdRequiredException "DeploymentIdRequiredException"
-//   At least one deployment ID must be specified.
+//   AtX least one deployment ID must be specified.
 //
 //   * ErrCodeInvalidDeploymentIdException "InvalidDeploymentIdException"
-//   At least one of the deployment IDs was specified in an invalid format.
+//   AtX least one of the deployment IDs was specified in an invalid format.
 //
 //   * ErrCodeDeploymentDoesNotExistException "DeploymentDoesNotExistException"
 //   The deployment does not exist with the applicable IAM user or AWS account.
@@ -2106,7 +2106,7 @@ func (c *CodeDeploy) GetDeploymentInstanceRequest(input *GetDeploymentInstanceIn
 //
 // Returned Error Codes:
 //   * ErrCodeDeploymentIdRequiredException "DeploymentIdRequiredException"
-//   At least one deployment ID must be specified.
+//   AtX least one deployment ID must be specified.
 //
 //   * ErrCodeDeploymentDoesNotExistException "DeploymentDoesNotExistException"
 //   The deployment does not exist with the applicable IAM user or AWS account.
@@ -2115,7 +2115,7 @@ func (c *CodeDeploy) GetDeploymentInstanceRequest(input *GetDeploymentInstanceIn
 //   The instance ID was not specified.
 //
 //   * ErrCodeInvalidDeploymentIdException "InvalidDeploymentIdException"
-//   At least one of the deployment IDs was specified in an invalid format.
+//   AtX least one of the deployment IDs was specified in an invalid format.
 //
 //   * ErrCodeInstanceDoesNotExistException "InstanceDoesNotExistException"
 //   The specified instance does not exist in the deployment group.
@@ -2870,7 +2870,7 @@ func (c *CodeDeploy) ListDeploymentInstancesRequest(input *ListDeploymentInstanc
 //
 // Returned Error Codes:
 //   * ErrCodeDeploymentIdRequiredException "DeploymentIdRequiredException"
-//   At least one deployment ID must be specified.
+//   AtX least one deployment ID must be specified.
 //
 //   * ErrCodeDeploymentDoesNotExistException "DeploymentDoesNotExistException"
 //   The deployment does not exist with the applicable IAM user or AWS account.
@@ -2882,7 +2882,7 @@ func (c *CodeDeploy) ListDeploymentInstancesRequest(input *ListDeploymentInstanc
 //   The next token was specified in an invalid format.
 //
 //   * ErrCodeInvalidDeploymentIdException "InvalidDeploymentIdException"
-//   At least one of the deployment IDs was specified in an invalid format.
+//   AtX least one of the deployment IDs was specified in an invalid format.
 //
 //   * ErrCodeInvalidInstanceStatusException "InvalidInstanceStatusException"
 //   The specified instance status does not exist.
@@ -3665,7 +3665,7 @@ func (c *CodeDeploy) SkipWaitTimeForInstanceTerminationRequest(input *SkipWaitTi
 //
 // Returned Error Codes:
 //   * ErrCodeDeploymentIdRequiredException "DeploymentIdRequiredException"
-//   At least one deployment ID must be specified.
+//   AtX least one deployment ID must be specified.
 //
 //   * ErrCodeDeploymentDoesNotExistException "DeploymentDoesNotExistException"
 //   The deployment does not exist with the applicable IAM user or AWS account.
@@ -3674,7 +3674,7 @@ func (c *CodeDeploy) SkipWaitTimeForInstanceTerminationRequest(input *SkipWaitTi
 //   The deployment is already complete.
 //
 //   * ErrCodeInvalidDeploymentIdException "InvalidDeploymentIdException"
-//   At least one of the deployment IDs was specified in an invalid format.
+//   AtX least one of the deployment IDs was specified in an invalid format.
 //
 //   * ErrCodeDeploymentNotStartedException "DeploymentNotStartedException"
 //   The specified deployment has not started.
@@ -3759,7 +3759,7 @@ func (c *CodeDeploy) StopDeploymentRequest(input *StopDeploymentInput) (req *req
 //
 // Returned Error Codes:
 //   * ErrCodeDeploymentIdRequiredException "DeploymentIdRequiredException"
-//   At least one deployment ID must be specified.
+//   AtX least one deployment ID must be specified.
 //
 //   * ErrCodeDeploymentDoesNotExistException "DeploymentDoesNotExistException"
 //   The deployment does not exist with the applicable IAM user or AWS account.
@@ -3768,7 +3768,7 @@ func (c *CodeDeploy) StopDeploymentRequest(input *StopDeploymentInput) (req *req
 //   The deployment is already complete.
 //
 //   * ErrCodeInvalidDeploymentIdException "InvalidDeploymentIdException"
-//   At least one of the deployment IDs was specified in an invalid format.
+//   AtX least one of the deployment IDs was specified in an invalid format.
 //
 // Please also see https://docs.aws.amazon.com/goto/WebAPI/codedeploy-2014-10-06/StopDeployment
 func (c *CodeDeploy) StopDeployment(input *StopDeploymentInput) (*StopDeploymentOutput, error) {

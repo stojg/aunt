@@ -1,8 +1,8 @@
 hash: 7dfe34c8a933bf0af48d2cc5e29bc6cd0d2ebbe7f1e912c4ecf304d204242278
-updated: 2017-08-21T10:52:23.252306311+12:00
+updated: 2017-09-11T19:26:56.998728777+12:00
 imports:
 - name: github.com/asdine/storm
-  version: e35194f772fef1442e9f6c8526a6c115ca729638
+  version: 255212403bcca439778718edf5e2d3d50744eca3
   subpackages:
   - codec
   - codec/json
@@ -10,7 +10,7 @@ imports:
   - internal
   - q
 - name: github.com/aws/aws-sdk-go
-  version: 3546c9128687af50e4bcedac5b1ffdd593db0c83
+  version: af01be3e6edf79e6f07b5816cfe0d2c6717e5c7f
   subpackages:
   - aws
   - aws/awserr

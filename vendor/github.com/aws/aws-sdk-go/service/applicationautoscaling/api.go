@@ -2797,11 +2797,11 @@ func (s *ScalingPolicy) SetTargetTrackingScalingPolicyConfiguration(v *TargetTra
 //
 //    * The ranges of your step adjustments can't overlap or have a gap.
 //
-//    * At most one step adjustment can have a null lower bound. If one step
+//    * AtX most one step adjustment can have a null lower bound. If one step
 //    adjustment has a negative lower bound, then there must be a step adjustment
 //    with a null lower bound.
 //
-//    * At most one step adjustment can have a null upper bound. If one step
+//    * AtX most one step adjustment can have a null upper bound. If one step
 //    adjustment has a positive upper bound, then there must be a step adjustment
 //    with a null upper bound.
 //
@@ -2990,6 +2990,13 @@ type TargetTrackingScalingPolicyConfiguration struct {
 	// Reserved for future use.
 	CustomizedMetricSpecification *CustomizedMetricSpecification `type:"structure"`
 
+	// Indicates whether scale in by the target tracking policy is disabled. If
+	// the value is true, scale in is disabled and the target tracking policy won't
+	// remove capacity from the scalable resource. Otherwise, scale in is enabled
+	// and the target tracking policy can remove capacity from the scalable resource.
+	// The default value is false.
+	DisableScaleIn *bool `type:"boolean"`
+
 	// A predefined metric.
 	PredefinedMetricSpecification *PredefinedMetricSpecification `type:"structure"`
 
@@ -3055,6 +3062,12 @@ func (s *TargetTrackingScalingPolicyConfiguration) Validate() error {
 // SetCustomizedMetricSpecification sets the CustomizedMetricSpecification field's value.
 func (s *TargetTrackingScalingPolicyConfiguration) SetCustomizedMetricSpecification(v *CustomizedMetricSpecification) *TargetTrackingScalingPolicyConfiguration {
 	s.CustomizedMetricSpecification = v
+	return s
+}
+
+// SetDisableScaleIn sets the DisableScaleIn field's value.
+func (s *TargetTrackingScalingPolicyConfiguration) SetDisableScaleIn(v bool) *TargetTrackingScalingPolicyConfiguration {
+	s.DisableScaleIn = &v
 	return s
 }
 

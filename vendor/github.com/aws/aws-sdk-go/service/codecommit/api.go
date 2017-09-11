@@ -81,7 +81,7 @@ func (c *CodeCommit) BatchGetRepositoriesRequest(input *BatchGetRepositoriesInpu
 //   number is 25.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -187,7 +187,7 @@ func (c *CodeCommit) CreateBranchRequest(input *CreateBranchInput) (req *request
 //   A repository name is required but was not specified.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -313,7 +313,7 @@ func (c *CodeCommit) CreateRepositoryRequest(input *CreateRepositoryInput) (req 
 //   A repository name is required but was not specified.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -425,7 +425,7 @@ func (c *CodeCommit) DeleteRepositoryRequest(input *DeleteRepositoryInput) (req 
 //   A repository name is required but was not specified.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -526,7 +526,7 @@ func (c *CodeCommit) GetBlobRequest(input *GetBlobInput) (req *request.Request, 
 //   A repository name is required but was not specified.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -648,7 +648,7 @@ func (c *CodeCommit) GetBranchRequest(input *GetBranchInput) (req *request.Reque
 //   The specified repository does not exist.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -759,7 +759,7 @@ func (c *CodeCommit) GetCommitRequest(input *GetCommitInput) (req *request.Reque
 //   A repository name is required but was not specified.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -883,7 +883,7 @@ func (c *CodeCommit) GetDifferencesRequest(input *GetDifferencesInput) (req *req
 //   The specified repository does not exist.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -1068,7 +1068,7 @@ func (c *CodeCommit) GetRepositoryRequest(input *GetRepositoryInput) (req *reque
 //   The specified repository does not exist.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -1169,7 +1169,7 @@ func (c *CodeCommit) GetRepositoryTriggersRequest(input *GetRepositoryTriggersIn
 //   A repository name is required but was not specified.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -1282,7 +1282,7 @@ func (c *CodeCommit) ListBranchesRequest(input *ListBranchesInput) (req *request
 //   The specified repository does not exist.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -1581,7 +1581,7 @@ func (c *CodeCommit) PutRepositoryTriggersRequest(input *PutRepositoryTriggersIn
 //   A repository name is required but was not specified.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -1626,11 +1626,11 @@ func (c *CodeCommit) PutRepositoryTriggersRequest(input *PutRepositoryTriggersIn
 //   was not specified.
 //
 //   * ErrCodeRepositoryTriggerBranchNameListRequiredException "RepositoryTriggerBranchNameListRequiredException"
-//   At least one branch name is required but was not specified in the trigger
+//   AtX least one branch name is required but was not specified in the trigger
 //   configuration.
 //
 //   * ErrCodeRepositoryTriggerEventsListRequiredException "RepositoryTriggerEventsListRequiredException"
-//   At least one event for the trigger is required but was not specified.
+//   AtX least one event for the trigger is required but was not specified.
 //
 //   * ErrCodeEncryptionIntegrityChecksFailedException "EncryptionIntegrityChecksFailedException"
 //   An encryption integrity check failed.
@@ -1733,7 +1733,7 @@ func (c *CodeCommit) TestRepositoryTriggersRequest(input *TestRepositoryTriggers
 //   A repository name is required but was not specified.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -1778,11 +1778,11 @@ func (c *CodeCommit) TestRepositoryTriggersRequest(input *TestRepositoryTriggers
 //   was not specified.
 //
 //   * ErrCodeRepositoryTriggerBranchNameListRequiredException "RepositoryTriggerBranchNameListRequiredException"
-//   At least one branch name is required but was not specified in the trigger
+//   AtX least one branch name is required but was not specified in the trigger
 //   configuration.
 //
 //   * ErrCodeRepositoryTriggerEventsListRequiredException "RepositoryTriggerEventsListRequiredException"
-//   At least one event for the trigger is required but was not specified.
+//   AtX least one event for the trigger is required but was not specified.
 //
 //   * ErrCodeEncryptionIntegrityChecksFailedException "EncryptionIntegrityChecksFailedException"
 //   An encryption integrity check failed.
@@ -1888,7 +1888,7 @@ func (c *CodeCommit) UpdateDefaultBranchRequest(input *UpdateDefaultBranchInput)
 //   The specified repository does not exist.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -2009,7 +2009,7 @@ func (c *CodeCommit) UpdateRepositoryDescriptionRequest(input *UpdateRepositoryD
 //   The specified repository does not exist.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or
@@ -2126,7 +2126,7 @@ func (c *CodeCommit) UpdateRepositoryNameRequest(input *UpdateRepositoryNameInpu
 //   A repository name is required but was not specified.
 //
 //   * ErrCodeInvalidRepositoryNameException "InvalidRepositoryNameException"
-//   At least one specified repository name is not valid.
+//   AtX least one specified repository name is not valid.
 //
 //   This exception only occurs when a specified repository name is not valid.
 //   Other exceptions occur when a required repository parameter is missing, or

@@ -508,7 +508,7 @@ type PostContentInput struct {
 	// value must be map (keys and values must be strings) that is JSON serialized
 	// and then base64 encoded.
 	//
-	// A session represents dialog between a user and Amazon Lex. At runtime, a
+	// A session represents dialog between a user and Amazon Lex. AtX runtime, a
 	// client application can pass contextual information, in the request to Amazon
 	// Lex. For example,
 	//
@@ -555,7 +555,7 @@ type PostContentInput struct {
 
 	// ID of the client application user. Typically, each of your application users
 	// should have a unique ID. The application developer decides the user IDs.
-	// At runtime, each request must include the user ID. Note the following considerations:
+	// AtX runtime, each request must include the user ID. Note the following considerations:
 	//
 	//    *  If you want a user to start conversation on one device and continue
 	//    the conversation on another device, you might choose a user-specific identifier,
@@ -874,7 +874,7 @@ type PostTextInput struct {
 	SessionAttributes map[string]*string `locationName:"sessionAttributes" type:"map"`
 
 	// The ID of the client application user. The application developer decides
-	// the user IDs. At runtime, each request must include the user ID. Typically,
+	// the user IDs. AtX runtime, each request must include the user ID. Typically,
 	// each of your application users should have a unique ID. Note the following
 	// considerations:
 	//

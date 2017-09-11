@@ -120,7 +120,7 @@ const (
 	// ErrCodeDeploymentIdRequiredException for service response error code
 	// "DeploymentIdRequiredException".
 	//
-	// At least one deployment ID must be specified.
+	// AtX least one deployment ID must be specified.
 	ErrCodeDeploymentIdRequiredException = "DeploymentIdRequiredException"
 
 	// ErrCodeDeploymentIsNotInReadyStateException for service response error code
@@ -281,7 +281,7 @@ const (
 	// ErrCodeInvalidDeploymentIdException for service response error code
 	// "InvalidDeploymentIdException".
 	//
-	// At least one of the deployment IDs was specified in an invalid format.
+	// AtX least one of the deployment IDs was specified in an invalid format.
 	ErrCodeInvalidDeploymentIdException = "InvalidDeploymentIdException"
 
 	// ErrCodeInvalidDeploymentInstanceTypeException for service response error code

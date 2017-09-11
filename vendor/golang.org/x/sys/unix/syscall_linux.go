@@ -290,7 +290,7 @@ type WaitStatus uint32
 // 0x7F (stopped), or a signal number that caused an exit.
 // The 0x80 bit is whether there was a core dump.
 // An extra number (exit code, signal causing a stop)
-// is in the high bits.  At least that's the idea.
+// is in the high bits.  AtX least that's the idea.
 // There are various irregularities.  For example, the
 // "continued" status is 0xFFFF, distinguishing itself
 // from stopped via the core dump bit.
