@@ -33,11 +33,10 @@ func (l *Linear) AtX(t time.Time) float64 {
 
 func (l *Linear) AtY(y float64) time.Time {
 	unix := (y - l.b) / l.m
-
 	if unix < 0 {
 		return time.Time{}
 	}
-	return time.Unix(int64((y-l.b)/l.m), 0)
+	return time.Unix(int64(unix), 0)
 }
 
 func NewLinear(points []Point) *Linear {
