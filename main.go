@@ -8,11 +8,16 @@ import (
 	"time"
 
 	"github.com/asdine/storm"
+	"github.com/stojg/aunt/lib/asg"
 	"github.com/stojg/aunt/lib/core"
+	"github.com/stojg/aunt/lib/dynamodb"
+	"github.com/stojg/aunt/lib/ebs"
 	"github.com/stojg/aunt/lib/ec2"
 	"github.com/stojg/aunt/lib/rds"
 	"github.com/urfave/cli"
 )
+
+const updateTick = 10 * time.Minute
 
 var (
 	// Version is used as a compile time flag
@@ -86,13 +91,10 @@ SUPPORT:  http://github.com/stojg/aunt
 			},
 		},
 		{
-			Name:  "serve",
+			Name:  "daemon",
 			Usage: "run as a HTTP server",
-			Flags: []cli.Flag{
-				cli.IntFlag{Name: "port", Value: 8080},
-			},
 			Action: func(c *cli.Context) error {
-				return serve(db)
+				return daemon(db)
 			},
 		},
 	}
@@ -103,29 +105,29 @@ SUPPORT:  http://github.com/stojg/aunt
 }
 
 func update(db *storm.DB) error {
-	//if err := asg.Update(db, roles, regions); err != nil {
-	//	return fmt.Errorf("error during update: %v", err)
-	//}
 	if err := ec2.Update(db, roles, regions); err != nil {
 		return fmt.Errorf("error during update: %v", err)
 	}
 	if err := rds.Update(db, roles, regions); err != nil {
 		return fmt.Errorf("error during update: %v", err)
 	}
-	//if err := ebs.Update(db, roles, regions); err != nil {
-	//	return fmt.Errorf("error during update: %v", err)
-	//}
-	//if err := dynamodb.Update(db, roles, regions); err != nil {
-	//	return fmt.Errorf("error during update: %v", err)
-	//}
-	//if err := core.Purge(db, 15*time.Minute); err != nil {
-	//	return fmt.Errorf("error during alert purge: %v", err)
-	//}
+	if err := asg.Update(db, roles, regions); err != nil {
+		return fmt.Errorf("error during update: %v", err)
+	}
+	if err := ebs.Update(db, roles, regions); err != nil {
+		return fmt.Errorf("error during update: %v", err)
+	}
+	if err := dynamodb.Update(db, roles, regions); err != nil {
+		return fmt.Errorf("error during update: %v", err)
+	}
+	if err := core.Purge(db, 15*time.Minute); err != nil {
+		return fmt.Errorf("error during alert purge: %v", err)
+	}
 	return nil
 }
 
-func serve(db *storm.DB) error {
-	resourceTicker := time.NewTicker(10 * time.Minute)
+func daemon(db *storm.DB) error {
+	resourceTicker := time.NewTicker(updateTick)
 	for {
 		if err := update(db); err != nil {
 			return fmt.Errorf("error during update: %v", err)

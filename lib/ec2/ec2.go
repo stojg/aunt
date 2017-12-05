@@ -26,23 +26,11 @@ type Instance struct {
 	Metrics      map[string]*float64
 }
 
-const (
-	metricCredits = "CPUCreditBalance"
-	metricsCPU    = "CPUUtilization"
-)
-
-const (
-	metricsCreditsThreshold float64 = 10
-	metricsCPUThreshold     float64 = 90.0
-)
-
-var metrics = []string{metricCredits, metricsCPU}
-
 // Update will update the database with Instance data
 func Update(db *storm.DB, roles map[string]string, regions []string) error {
+	fmt.Println(time.Now().Format(time.Kitchen))
 	var wg sync.WaitGroup
 	wg.Add(len(roles))
-
 	for account, role := range roles {
 		// update all accounts in parallel to speed this up
 		go func(account, role string) {
@@ -58,6 +46,23 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 	for _, region := range regions {
 		sess, config := core.NewCredentials(region, role)
 		svc := ec2.New(sess, config)
+
+		statusResp, statusErr := svc.DescribeInstanceStatus(&ec2.DescribeInstanceStatusInput{})
+		if statusErr != nil {
+			fmt.Printf("Error during ec2.DescribeInstanceStatus: %v\n", statusErr)
+			return
+		}
+
+		statuses := make(map[string]string, 0)
+
+		for _, rest := range statusResp.InstanceStatuses {
+			systemStatus := *rest.SystemStatus.Status
+			instanceStatus := *rest.InstanceStatus.Status
+			if systemStatus == "impaired" || instanceStatus == "impaired" {
+				statuses[*rest.InstanceId] = fmt.Sprintf("SystemStatus %s, InstanceStatus: %s\n", systemStatus, instanceStatus)
+			}
+		}
+
 		cw := cloudwatch.New(sess, config)
 
 		resp, err := svc.DescribeInstances(&ec2.DescribeInstancesInput{
@@ -87,23 +92,31 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 					LastUpdated:  time.Now(),
 					Metrics:      make(map[string]*float64),
 				}
-				dimensions := []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: inst.InstanceId}}
 
-				ms := metric("AWS/EC2", dimensions, metricCredits, cw)
-				if len(ms) < 3 {
+				dimensions := []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: inst.InstanceId}}
+				dataPoints := cpuCreditsMetrics("AWS/EC2", dimensions, cw)
+				if len(dataPoints) < 3 {
 					continue
 				}
 
-				linear := stats.NewLinear(stats.Convert(ms))
+				linear := stats.NewLinear(stats.Convert(dataPoints))
 				zeroAt := linear.AtY(0)
 				now := time.Now()
-				if !zeroAt.Before(now) && zeroAt.Before(now.Add(12*time.Hour)) || linear.LastY() < 5 {
-					duration := zeroAt.Sub(now)
-					fmt.Printf("%0.1fhrs %s | %0.1fcr/hr | current: %0.2f\n", duration.Hours(), instance.Name, linear.Slope()*3600, linear.LastY())
+				creditUsagePerHour := linear.Slope() * 3600
+				launchTime := instance.LaunchTime.Local().Format("2006-01-02 15:04")
+				// priority 1
+				if zeroAt.After(now) && zeroAt.Before(now.Add(6*time.Hour)) {
+					fmt.Printf("P1: %shrs %s (%s, %s) | %+0.2fcr/hr | current: %0.2f | launched: %s\n", zeroAt.Sub(now), instance.Name, instance.ResourceID, instance.Region, creditUsagePerHour, linear.LastY(), launchTime)
+				} else if linear.LastY() < 10 && linear.Slope() < 10 {
+					fmt.Printf("P2: %0.2fcrds %s (%s, %s) | %+0.2fcr/hr | launched: %s\n", linear.LastY(), instance.Name, instance.ResourceID, instance.Region, creditUsagePerHour, launchTime)
+				}
+
+				if val := statuses[instance.ResourceID]; val != "" {
+					fmt.Printf("P2: %s (%s, %s) %s | launched: %s\n", instance.Name, instance.ResourceID, instance.Region, val, launchTime)
 				}
 
 				//for _, name := range metrics {
-				//	instance.Metrics[name] = metric("AWS/EC2", dimensions, name, cw)
+				//	instance.Metrics[name] = cpuCreditsMetrics("AWS/EC2", dimensions, name, cw)
 				//}
 				//if err := db.Save(instance); err != nil {
 				//	fmt.Printf("%+v\n", err)
@@ -136,10 +149,10 @@ func updateForRole(db *storm.DB, account, role string, regions []string) {
 	}
 }
 
-func metric(namespace string, dimensions []*cloudwatch.Dimension, metricName string, cw *cloudwatch.CloudWatch) []*cloudwatch.Datapoint {
+func cpuCreditsMetrics(namespace string, dimensions []*cloudwatch.Dimension, cw *cloudwatch.CloudWatch) []*cloudwatch.Datapoint {
 	input := &cloudwatch.GetMetricStatisticsInput{
 		Namespace:  aws.String(namespace),
-		MetricName: aws.String(metricName),
+		MetricName: aws.String("CPUCreditBalance"),
 		Dimensions: dimensions,
 		StartTime:  aws.Time(time.Now().Add(-6 * time.Hour)),
 		EndTime:    aws.Time(time.Now()),
@@ -152,8 +165,4 @@ func metric(namespace string, dimensions []*cloudwatch.Dimension, metricName str
 		return nil
 	}
 	return result.Datapoints
-	//if len(result.Datapoints) == 0 {
-	//	return nil
-	//}
-	//return result.Datapoints[0].Average
 }
